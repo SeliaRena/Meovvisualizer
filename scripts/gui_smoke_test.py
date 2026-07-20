@@ -12,7 +12,7 @@ SRC = ROOT / "src"
 if str(SRC) not in sys.path:
     sys.path.insert(0, str(SRC))
 
-from PySide6.QtCore import QObject, QTimer  # noqa: E402
+from PySide6.QtCore import QEventLoop, QObject, QTimer  # noqa: E402
 from PySide6.QtGui import QGuiApplication  # noqa: E402
 from PySide6.QtQml import QQmlError  # noqa: E402
 
@@ -51,7 +51,25 @@ def main() -> int:
             return 1
 
     controller.toggleRunning()
-    application.processEvents()
+    update_loop = QEventLoop()
+    poll_timer = QTimer()
+    poll_timer.setInterval(0)
+    poll_timer.timeout.connect(
+        lambda: update_loop.quit() if any(controller.property("bands")) else None
+    )
+    timeout_timer = QTimer()
+    timeout_timer.setSingleShot(True)
+    timeout_timer.timeout.connect(update_loop.quit)
+    poll_timer.start()
+    timeout_timer.start(1_000)
+    update_loop.exec()
+    poll_timer.stop()
+    timed_out = not timeout_timer.isActive()
+    timeout_timer.stop()
+    if timed_out:
+        print("analysis worker did not publish before timeout", file=sys.stderr)
+        controller.shutdown()
+        return 1
     band_values = controller.property("bands")
     rms_value = controller.property("rms")
     peak_value = controller.property("peak")
@@ -65,6 +83,7 @@ def main() -> int:
         or peak_value <= 0.0
     ):
         print("synthetic pipeline did not publish visible values", file=sys.stderr)
+        controller.shutdown()
         return 1
     controller.toggleRunning()
 

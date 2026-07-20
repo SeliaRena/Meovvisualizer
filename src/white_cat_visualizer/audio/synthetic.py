@@ -75,6 +75,12 @@ class SyntheticAudioSource:
         self._frame_index = 0
         self._rng = np.random.default_rng(self._seed)
 
+    def start(self) -> None:
+        """Synthetic generation needs no external lifecycle work."""
+
+    def stop(self) -> None:
+        """Synthetic generation needs no external lifecycle work."""
+
     def next_frame(self) -> AudioFrame:
         start = self._frame_index * self._frame_size
         sample_indices = np.arange(start, start + self._frame_size, dtype=np.float64)

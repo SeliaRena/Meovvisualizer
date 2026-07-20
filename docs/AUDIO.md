@@ -64,6 +64,21 @@ The first real backend is selected-output-device WASAPI loopback. It must:
 
 Do not claim per-application capture.
 
+### Manual Windows loopback check
+
+Install the GUI and Windows audio extras, then start the application while audio is playing:
+
+```powershell
+python -m pip install -e ".[gui,windows-audio]"
+white-cat-visualizer
+```
+
+Select each listed Windows output endpoint and confirm that Start animates the level and bands.
+Change endpoints and use Start/Stop repeatedly. While a Windows endpoint is selected, disable or
+unplug it and confirm the visualizer stops with a visible source error. Re-enable the endpoint,
+restart the application if Windows assigned a new endpoint, and confirm Start recovers capture.
+Synthetic sources must remain selectable throughout this check.
+
 ## Performance rule
 
 Use NumPy vectorization and cache stable arrays. Run `scripts/benchmark_analysis.py` after changing spectrum or smoothing code. Treat a regression as a reason to inspect the hot path, not as permission to introduce opaque code without evidence.

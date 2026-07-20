@@ -1,36 +1,47 @@
 from __future__ import annotations
 
 from collections.abc import Sequence
+from dataclasses import dataclass
+from enum import StrEnum
 
-from PySide6.QtCore import (
-    Property,
-    QCoreApplication,
-    QObject,
-    Qt,
-    QTimer,
-    Signal,
-    Slot,
-)
+from PySide6.QtCore import Property, QObject, Qt, Signal, Slot
 
 from white_cat_visualizer.analysis.frame import VisualizerFrame
 from white_cat_visualizer.analysis.spectrum import SpectrumAnalyzer
 from white_cat_visualizer.audio.source import AudioSource
+from white_cat_visualizer.runtime.analysis_worker import (
+    AnalysisWorker,
+    WorkerFailure,
+    WorkerFailureStage,
+)
+
+
+class ControllerErrorCode(StrEnum):
+    ANALYSIS_WORKER_FAILED = "analysis-worker-failed"
+    AUDIO_SOURCE_FAILED = "audio-source-failed"
+
+
+@dataclass(frozen=True, slots=True)
+class ControllerErrorState:
+    code: ControllerErrorCode
+    message: str
 
 
 class VisualizerController(QObject):
-    """Drive the temporary synthetic pipeline and expose render-ready UI state."""
+    """Own runtime lifecycle and expose render-ready state on the UI thread."""
 
     sourceChanged = Signal()
     modeChanged = Signal()
     sensitivityChanged = Signal()
     runningChanged = Signal()
+    errorChanged = Signal()
     bandsChanged = Signal()
     rmsChanged = Signal()
     peakChanged = Signal()
+    _runtimeUpdateAvailable = Signal()
 
     _MODE_NAMES = ("Reference bars", "Long cats", "Bouncing cats")
     _BAND_COUNT = 24
-    _FRAME_INTERVAL_MS = 43
 
     def __init__(
         self,
@@ -68,15 +79,24 @@ class VisualizerController(QObject):
         self._mode = self._MODE_NAMES[0]
         self._sensitivity = 1.0
         self._running = False
+        self._error_state: ControllerErrorState | None = None
         self._bands = [0.0] * self._BAND_COUNT
         self._rms = 0.0
         self._peak = 0.0
         self._latest_frame: VisualizerFrame | None = None
+        self._worker = self._create_worker()
 
-        self._timer = QTimer(self)
-        self._timer.setTimerType(Qt.TimerType.PreciseTimer)
-        self._timer.setInterval(self._FRAME_INTERVAL_MS)
-        self._timer.timeout.connect(self.processNextFrame)
+        self._runtimeUpdateAvailable.connect(
+            self.processNextFrame,
+            Qt.ConnectionType.QueuedConnection,
+        )
+
+    def _create_worker(self) -> AnalysisWorker:
+        return AnalysisWorker(
+            self._selected_source,
+            self._analyzer,
+            on_update_available=self._runtimeUpdateAvailable.emit,
+        )
 
     def _get_source_names(self) -> list[str]:
         return [source.display_name for source in self._sources]
@@ -90,11 +110,19 @@ class VisualizerController(QObject):
         selected_source = self._source_by_name.get(value)
         if selected_source is None or selected_source is self._selected_source:
             return
+
+        was_running = self._running
+        self._running = False
+        self._worker.shutdown()
         self._selected_source = selected_source
-        self._reset_pipeline()
+        self._worker = self._create_worker()
+        self._reset_output()
+        self._set_error_state(None)
         self.sourceChanged.emit()
-        if self._running:
-            self.processNextFrame()
+
+        if was_running:
+            self._worker.start()
+            self._running = True
 
     source = Property(str, _get_source, _set_source, notify=sourceChanged)
 
@@ -144,37 +172,91 @@ class VisualizerController(QObject):
 
     bands = Property(list, _get_bands, notify=bandsChanged)
 
-    @Property(str, constant=True)
+    @Property(str, notify=errorChanged)
     def error(self) -> str:
-        return ""
+        return "" if self._error_state is None else self._error_state.message
+
+    @Property(str, notify=errorChanged)
+    def errorCode(self) -> str:
+        return "" if self._error_state is None else self._error_state.code.value
+
+    @property
+    def error_state(self) -> ControllerErrorState | None:
+        return self._error_state
 
     @Slot()
     def toggleRunning(self) -> None:
         if self._running:
-            self._timer.stop()
-            self._running = False
-            self._reset_pipeline()
+            self._stop()
         else:
-            self._reset_pipeline()
-            self._running = True
-            self.processNextFrame()
-            if QCoreApplication.instance() is not None:
-                self._timer.start()
+            self._start()
+
+    def _start(self) -> None:
+        self._reset_output()
+        self._set_error_state(None)
+        self._worker.start()
+        self._running = True
+        self.runningChanged.emit()
+
+    def _stop(self) -> None:
+        self._running = False
+        self._worker.stop()
+        self._reset_output()
         self.runningChanged.emit()
 
     @Slot()
+    def shutdown(self) -> None:
+        was_running = self._running
+        self._running = False
+        self._worker.shutdown()
+        self._reset_output()
+        if was_running:
+            self.runningChanged.emit()
+
+    @Slot()
     def processNextFrame(self) -> None:
-        if not self._running:
+        update = self._worker.take_latest()
+        if not self._running or update is None:
             return
-        audio_frame = self._selected_source.next_frame()
-        self._latest_frame = self._analyzer.analyze(audio_frame)
+        if isinstance(update, WorkerFailure):
+            self._handle_worker_failure(update)
+            return
+        self._latest_frame = update
         self._publish_latest_frame()
 
-    def _reset_pipeline(self) -> None:
-        self._selected_source.reset()
-        self._analyzer.reset()
+    def _handle_worker_failure(self, failure: WorkerFailure) -> None:
+        self._running = False
+        self._worker.stop()
+        self._reset_output()
+        detail = failure.message or "worker operation failed"
+        source_failed = failure.stage in (
+            WorkerFailureStage.STARTUP,
+            WorkerFailureStage.SOURCE_READ,
+        )
+        code = (
+            ControllerErrorCode.AUDIO_SOURCE_FAILED
+            if source_failed
+            else ControllerErrorCode.ANALYSIS_WORKER_FAILED
+        )
+        prefix = f"{self._selected_source.display_name}: " if source_failed else ""
+        message = f"{prefix}{failure.stage.value}: {failure.exception_type}: {detail}"
+        self._set_error_state(
+            ControllerErrorState(
+                code=code,
+                message=message,
+            )
+        )
+        self.runningChanged.emit()
+
+    def _reset_output(self) -> None:
         self._latest_frame = None
         self._set_output([0.0] * self._BAND_COUNT, 0.0, 0.0)
+
+    def _set_error_state(self, value: ControllerErrorState | None) -> None:
+        if value == self._error_state:
+            return
+        self._error_state = value
+        self.errorChanged.emit()
 
     def _publish_latest_frame(self) -> None:
         if self._latest_frame is None:

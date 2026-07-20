@@ -55,6 +55,7 @@ ApplicationWindow {
             Flow {
                 anchors.fill: parent
                 anchors.margins: 14
+                anchors.bottomMargin: root.controller.error ? 42 : 14
                 spacing: root.narrow ? 10 : 14
 
                 Column {
@@ -348,6 +349,21 @@ ApplicationWindow {
                         radius: 6
                     }
                 }
+            }
+
+            Label {
+                id: sourceError
+
+                objectName: "sourceError"
+                anchors.left: parent.left
+                anchors.right: parent.right
+                anchors.bottom: parent.bottom
+                anchors.margins: 14
+                visible: root.controller.error.length > 0
+                text: root.controller.error
+                color: root.theme.secondaryText
+                elide: Text.ElideRight
+                Accessible.name: qsTr("Audio source error")
             }
         }
 

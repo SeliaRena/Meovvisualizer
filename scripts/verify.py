@@ -69,7 +69,11 @@ def main() -> int:
             [
                 Check("ruff format", (python, "-m", "ruff", "format", "--check", "."), "ruff"),
                 Check("ruff lint", (python, "-m", "ruff", "check", "."), "ruff"),
-                Check("pyright", (python, "-m", "pyright"), "pyright"),
+                Check(
+                    "pyright",
+                    (python, "-m", "pyright", "--pythonpath", python),
+                    "pyright",
+                ),
             ]
         )
     checks.extend(
