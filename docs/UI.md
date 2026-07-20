@@ -1,18 +1,36 @@
 # UI and animation contract
 
-## Visual direction
+## Visual Direction
 
-A calm white desktop app, not pure white on pure white:
+The application uses a modern monochrome dark theme.
 
-- app background: `#F7F7F5`
-- control surface: `#FFFFFF`
-- visualizer canvas: `#EDEDEA`
-- primary text: `#202020`
-- secondary text: `#777777`
-- border: `#DDDDDA`
-- cats: white with a subtle gray outline or shadow
+The interface should feel minimal, precise, calm, and contemporary.
+White cats and controls should stand out clearly against layered charcoal surfaces.
 
-Avoid gradients, neon, glass effects, heavy shadows, decorative clutter, and excessive rounding.
+Avoid pure black across every surface. Use subtle dark-gray elevation to separate regions.
+
+## Color Tokens
+
+- App background: `#0D0D0F`
+- Top control surface: `#161619`
+- Visualizer canvas: `#111113`
+- Elevated control surface: `#202024`
+- Hover surface: `#29292E`
+- Primary text: `#F5F5F5`
+- Secondary text: `#A1A1AA`
+- Muted text: `#6F6F78`
+- Border: `#303036`
+- Cat fill: `#F7F7F5`
+- Cat secondary detail: `#D8D8D4`
+- Cat shadow: `#000000` at low opacity
+- Disabled content: `#55555D`
+
+## Contrast
+
+- Cats must remain visually dominant.
+- Do not use bright accent colors in the default theme.
+- Use contrast, scale, spacing, and opacity instead of decorative color.
+- Avoid pure `#000000` backgrounds directly beside pure `#FFFFFF` large surfaces where possible.
 
 ## Layout
 

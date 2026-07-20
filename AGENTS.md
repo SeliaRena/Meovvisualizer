@@ -4,6 +4,10 @@
 
 Build a small, understandable Windows desktop music visualizer with a white minimal UI and two cat visualizers. Prefer correct, measurable, boring code over clever abstractions.
 
+## Virtual Environment
+
+- python venv: "C:\Users\USER\Desktop\WorkStation\Python\PyEnv\Scripts\python.exe"
+
 ## Read only what the task needs
 
 - Always read this file and the active phase file under `prompts/`.
