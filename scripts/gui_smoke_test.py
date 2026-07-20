@@ -30,11 +30,25 @@ def main() -> int:
         return 1
 
     root = engine.rootObjects()[0]
-    bars = root.findChild(QObject, "spectrumBars")
-    if bars is None or bars.property("count") != 24:
-        count = 0 if bars is None else bars.property("count")
-        print(f"expected 24 spectrum bars, found {count}", file=sys.stderr)
-        return 1
+    repeaters = (
+        ("spectrumBars", "reference bars"),
+        ("longCatBars", "long cats"),
+        ("bouncingCatHeads", "bouncing cat heads"),
+    )
+    for object_name, label in repeaters:
+        repeater = root.findChild(QObject, object_name)
+        if repeater is None or repeater.property("count") != 24:
+            count = 0 if repeater is None else repeater.property("count")
+            print(f"expected 24 {label}, found {count}", file=sys.stderr)
+            return 1
+
+    for mode in ("Reference bars", "Long cats", "Bouncing cats"):
+        controller.setProperty("mode", mode)
+        application.processEvents()
+        if qml_warnings:
+            for warning in qml_warnings:
+                print(warning, file=sys.stderr)
+            return 1
 
     controller.toggleRunning()
     application.processEvents()

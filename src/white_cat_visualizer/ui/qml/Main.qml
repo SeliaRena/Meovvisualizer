@@ -372,23 +372,83 @@ ApplicationWindow {
             }
 
             Row {
+                id: referenceVisualizer
+
+                objectName: "referenceVisualizer"
                 anchors.left: parent.left
                 anchors.right: parent.right
                 anchors.bottom: parent.bottom
-                anchors.margins: 28
+                anchors.margins: root.narrow ? 14 : 28
                 height: Math.max(80, parent.height - 90)
-                spacing: 4
+                spacing: Math.max(2, Math.min(6, width / 140))
+                visible: root.controller.mode === "Reference bars"
 
                 Repeater {
                     objectName: "spectrumBars"
                     model: 24
 
                     Components.SpectrumBar {
-                        width: Math.max(3, (canvas.width - 56 - 23 * 4) / 24)
+                        width: (referenceVisualizer.width - 23 * referenceVisualizer.spacing) / 24
                         height: parent.height
                         bandValue: root.controller.bands[index]
                         fillColor: root.theme.catFill
                         borderColor: root.theme.catDetail
+                    }
+                }
+            }
+
+            Row {
+                id: longCatVisualizer
+
+                objectName: "longCatVisualizer"
+                anchors.left: parent.left
+                anchors.right: parent.right
+                anchors.bottom: parent.bottom
+                anchors.margins: root.narrow ? 14 : 28
+                height: Math.max(80, parent.height - 90)
+                spacing: Math.max(2, Math.min(6, width / 140))
+                visible: root.controller.mode === "Long cats"
+
+                Repeater {
+                    objectName: "longCatBars"
+                    model: 24
+
+                    Components.LongCatBar {
+                        width: (longCatVisualizer.width - 23 * longCatVisualizer.spacing) / 24
+                        height: parent.height
+                        bandValue: root.controller.bands[index]
+                        transientValue: root.controller.peak
+                        peakValue: root.controller.peak
+                        fillColor: root.theme.catFill
+                        detailColor: root.theme.catDetail
+                    }
+                }
+            }
+
+            Row {
+                id: bouncingCatVisualizer
+
+                objectName: "bouncingCatVisualizer"
+                anchors.left: parent.left
+                anchors.right: parent.right
+                anchors.bottom: parent.bottom
+                anchors.margins: root.narrow ? 14 : 28
+                height: Math.max(80, parent.height - 90)
+                spacing: Math.max(2, Math.min(6, width / 140))
+                visible: root.controller.mode === "Bouncing cats"
+
+                Repeater {
+                    objectName: "bouncingCatHeads"
+                    model: 24
+
+                    Components.BouncingCatHead {
+                        width: (bouncingCatVisualizer.width
+                                - 23 * bouncingCatVisualizer.spacing) / 24
+                        height: parent.height
+                        bandValue: root.controller.bands[index]
+                        peakValue: root.controller.peak
+                        fillColor: root.theme.catFill
+                        detailColor: root.theme.catDetail
                     }
                 }
             }

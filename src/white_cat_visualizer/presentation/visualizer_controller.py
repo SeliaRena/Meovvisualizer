@@ -28,7 +28,7 @@ class VisualizerController(QObject):
     rmsChanged = Signal()
     peakChanged = Signal()
 
-    _MODE_NAMES = ("Reference bars",)
+    _MODE_NAMES = ("Reference bars", "Long cats", "Bouncing cats")
     _BAND_COUNT = 24
     _FRAME_INTERVAL_MS = 43
 

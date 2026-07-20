@@ -29,7 +29,7 @@ def test_controller_starts_with_deterministic_render_ready_state() -> None:
 
     assert controller.sourceNames == [source_name(mode) for mode in SyntheticMode]
     assert controller.source == source_name(SyntheticMode.BASS_PULSE)
-    assert controller.modeNames == ["Reference bars"]
+    assert controller.modeNames == ["Reference bars", "Long cats", "Bouncing cats"]
     assert controller.mode == "Reference bars"
     assert controller.sensitivity == 1.0
     assert controller.running is False
@@ -37,6 +37,19 @@ def test_controller_starts_with_deterministic_render_ready_state() -> None:
     assert controller.peak == 0.0
     assert controller.bands == [0.0] * 24
     assert controller.error == ""
+
+
+def test_controller_accepts_only_documented_visualizer_modes() -> None:
+    controller = make_controller()
+
+    controller.mode = "Long cats"
+    assert controller.mode == "Long cats"
+
+    controller.mode = "Bouncing cats"
+    assert controller.mode == "Bouncing cats"
+
+    controller.mode = "Unknown mode"
+    assert controller.mode == "Bouncing cats"
 
 
 def test_start_stop_and_restart_reset_the_pipeline_deterministically() -> None:
