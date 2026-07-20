@@ -9,13 +9,12 @@ import pytest
 qt_core = pytest.importorskip("PySide6.QtCore")
 qt_gui = pytest.importorskip("PySide6.QtGui")
 application_module = pytest.importorskip("white_cat_visualizer.app")
-presentation = pytest.importorskip("white_cat_visualizer.presentation")
 
 QObject = qt_core.QObject
 QColor = qt_gui.QColor
 QGuiApplication = qt_gui.QGuiApplication
 create_engine = application_module.create_engine
-VisualizerController = presentation.VisualizerController
+create_controller = application_module.create_controller
 
 
 @pytest.fixture(scope="module")
@@ -27,7 +26,7 @@ def application() -> QGuiApplication:
 def test_shell_loads_and_keeps_canvas_usable_at_supported_sizes(
     application: QGuiApplication,
 ) -> None:
-    controller = VisualizerController()
+    controller = create_controller()
     engine = create_engine(controller)
     roots = engine.rootObjects()
     assert len(roots) == 1
@@ -51,7 +50,7 @@ def test_shell_loads_and_keeps_canvas_usable_at_supported_sizes(
 def test_shell_uses_documented_monochrome_dark_surfaces(
     application: QGuiApplication,
 ) -> None:
-    controller = VisualizerController()
+    controller = create_controller()
     engine = create_engine(controller)
     root = engine.rootObjects()[0]
 
@@ -68,4 +67,31 @@ def test_shell_uses_documented_monochrome_dark_surfaces(
     assert theme.property("primaryText") == QColor("#F5F5F5")
     assert theme.property("border") == QColor("#303036")
 
+    del engine
+
+
+def test_shell_renders_fixed_bars_and_separate_levels(
+    application: QGuiApplication,
+) -> None:
+    controller = create_controller()
+    engine = create_engine(controller)
+    root = engine.rootObjects()[0]
+
+    bars = root.findChild(QObject, "spectrumBars")
+    rms_level = root.findChild(QObject, "rmsLevel")
+    peak_level = root.findChild(QObject, "peakLevel")
+
+    assert bars is not None
+    assert bars.property("count") == 24
+    assert rms_level is not None
+    assert peak_level is not None
+
+    controller.toggleRunning()
+    application.processEvents()
+
+    assert any(controller.bands)
+    assert rms_level.property("value") == pytest.approx(controller.rms)
+    assert peak_level.property("value") == pytest.approx(controller.peak)
+
+    controller.toggleRunning()
     del engine

@@ -1,6 +1,7 @@
 import QtQuick
 import QtQuick.Controls.Basic
 import QtQuick.Layouts
+import "components" as Components
 
 ApplicationWindow {
     id: root
@@ -242,36 +243,78 @@ ApplicationWindow {
                 }
 
                 Column {
-                    width: root.narrow ? 120 : 140
+                    width: root.narrow ? 180 : 160
                     spacing: 5
 
                     Label {
                         text: qsTr("Level")
                         color: root.theme.secondaryText
                     }
-                    ProgressBar {
-                        id: levelControl
+                    Row {
+                        spacing: 8
 
-                        objectName: "levelControl"
-                        width: parent.width
-                        value: Math.max(root.controller.rms, root.controller.peak)
-                        Accessible.name: qsTr("Audio level")
-
-                        background: Rectangle {
-                            implicitHeight: 8
-                            color: root.theme.elevatedSurface
-                            border.color: root.theme.border
-                            radius: 4
+                        Label {
+                            width: 34
+                            text: qsTr("RMS")
+                            color: root.theme.mutedText
                         }
-                        contentItem: Item {
-                            implicitHeight: 8
+                        ProgressBar {
+                            id: rmsLevel
 
-                            Rectangle {
-                                width: levelControl.visualPosition * parent.width
-                                height: parent.height
-                                color: levelControl.enabled ? root.theme.catDetail
-                                                            : root.theme.disabledContent
+                            objectName: "rmsLevel"
+                            width: 112
+                            value: root.controller.rms
+                            Accessible.name: qsTr("RMS level")
+
+                            background: Rectangle {
+                                implicitHeight: 7
+                                color: root.theme.elevatedSurface
+                                border.color: root.theme.border
                                 radius: 4
+                            }
+                            contentItem: Item {
+                                implicitHeight: 7
+
+                                Rectangle {
+                                    width: rmsLevel.visualPosition * parent.width
+                                    height: parent.height
+                                    color: root.theme.catDetail
+                                    radius: 4
+                                }
+                            }
+                        }
+                    }
+                    Row {
+                        spacing: 8
+
+                        Label {
+                            width: 34
+                            text: qsTr("Peak")
+                            color: root.theme.mutedText
+                        }
+                        ProgressBar {
+                            id: peakLevel
+
+                            objectName: "peakLevel"
+                            width: 112
+                            value: root.controller.peak
+                            Accessible.name: qsTr("Peak level")
+
+                            background: Rectangle {
+                                implicitHeight: 7
+                                color: root.theme.elevatedSurface
+                                border.color: root.theme.border
+                                radius: 4
+                            }
+                            contentItem: Item {
+                                implicitHeight: 7
+
+                                Rectangle {
+                                    width: peakLevel.visualPosition * parent.width
+                                    height: parent.height
+                                    color: root.theme.catFill
+                                    radius: 4
+                                }
                             }
                         }
                     }
@@ -337,29 +380,23 @@ ApplicationWindow {
                 spacing: 4
 
                 Repeater {
-                    model: root.controller.bands.length
+                    objectName: "spectrumBars"
+                    model: 24
 
-                    Item {
-                        required property int index
-
+                    Components.SpectrumBar {
                         width: Math.max(3, (canvas.width - 56 - 23 * 4) / 24)
                         height: parent.height
-
-                        Rectangle {
-                            anchors.bottom: parent.bottom
-                            width: parent.width
-                            height: Math.max(3, parent.height * root.controller.bands[index])
-                            color: root.theme.catFill
-                            border.color: root.theme.catDetail
-                            radius: Math.min(width / 2, 6)
-                        }
+                        bandValue: root.controller.bands[index]
+                        fillColor: root.theme.catFill
+                        borderColor: root.theme.catDetail
                     }
                 }
             }
 
             Label {
                 anchors.centerIn: parent
-                text: root.controller.running ? qsTr("Waiting for audio") : qsTr("Press Start")
+                visible: !root.controller.running
+                text: qsTr("Press Start")
                 color: root.theme.primaryText
             }
         }

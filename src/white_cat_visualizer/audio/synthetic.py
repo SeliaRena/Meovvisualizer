@@ -64,7 +64,8 @@ class SyntheticAudioSource:
 
     @property
     def display_name(self) -> str:
-        return f"Synthetic — {self._mode.value}"
+        mode_name = self._mode.value.replace("-", " ").title()
+        return f"Synthetic: {mode_name}"
 
     @property
     def mode(self) -> SyntheticMode:
