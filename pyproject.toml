@@ -1,0 +1,50 @@
+[build-system]
+requires = ["hatchling>=1.25"]
+build-backend = "hatchling.build"
+
+[project]
+name = "white-cat-visualizer"
+version = "0.1.0"
+description = "Compact Codex-first starter for a minimal white cat music visualizer"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+  "numpy>=1.26",
+]
+
+[project.scripts]
+white-cat-visualizer = "white_cat_visualizer.app:main"
+
+[project.optional-dependencies]
+dev = [
+  "pytest>=8.0",
+  "ruff>=0.6",
+  "pyright>=1.1",
+]
+gui = [
+  "PySide6>=6.8",
+]
+windows-audio = [
+  "PyAudioWPatch>=0.2.12.5; platform_system == 'Windows'",
+]
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/white_cat_visualizer"]
+
+[tool.pytest.ini_options]
+addopts = "-q"
+testpaths = ["tests"]
+
+[tool.ruff]
+target-version = "py311"
+line-length = 100
+src = ["src", "tests", "scripts"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP", "SIM", "RUF"]
+
+[tool.pyright]
+include = ["src", "tests", "scripts"]
+pythonVersion = "3.11"
+typeCheckingMode = "strict"
+reportMissingTypeStubs = "warning"

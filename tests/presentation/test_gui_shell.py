@@ -1,0 +1,47 @@
+from __future__ import annotations
+
+import os
+
+os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
+
+import pytest
+
+qt_core = pytest.importorskip("PySide6.QtCore")
+qt_gui = pytest.importorskip("PySide6.QtGui")
+application_module = pytest.importorskip("white_cat_visualizer.app")
+presentation = pytest.importorskip("white_cat_visualizer.presentation")
+
+QObject = qt_core.QObject
+QGuiApplication = qt_gui.QGuiApplication
+create_engine = application_module.create_engine
+VisualizerController = presentation.VisualizerController
+
+
+@pytest.fixture(scope="module")
+def application() -> QGuiApplication:
+    existing = QGuiApplication.instance()
+    return existing if isinstance(existing, QGuiApplication) else QGuiApplication([])
+
+
+def test_shell_loads_and_keeps_canvas_usable_at_supported_sizes(
+    application: QGuiApplication,
+) -> None:
+    controller = VisualizerController()
+    engine = create_engine(controller)
+    roots = engine.rootObjects()
+    assert len(roots) == 1
+    root = roots[0]
+
+    for width, height in ((520, 480), (960, 720), (1440, 900)):
+        root.setProperty("width", width)
+        root.setProperty("height", height)
+        application.processEvents()
+
+        controls = root.findChild(QObject, "controlSurface")
+        canvas = root.findChild(QObject, "visualizerCanvas")
+        assert controls is not None
+        assert canvas is not None
+        assert canvas.property("height") >= 240
+        assert controls.property("y") + controls.property("height") <= canvas.property("y")
+
+    del engine
