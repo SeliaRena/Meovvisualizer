@@ -11,136 +11,335 @@ Item {
     required property color fillColor
     required property color detailColor
 
-    readonly property real normalizedBand: Math.max(0, Math.min(1, bandValue))
-    readonly property real normalizedTransient: Math.max(0, Math.min(1, transientValue))
-    readonly property real normalizedPeak: Math.max(0, Math.min(1, peakValue))
-    readonly property real headSize: Math.max(7, Math.min(width * 1.15, 24))
-    readonly property real headOffset: normalizedBand * 4 + normalizedTransient * 8
-    readonly property real earAngle: normalizedTransient * 18
-    readonly property real squashAmount: Math.max(0, normalizedPeak - 0.72) / 0.28
-    readonly property real squashScale: 1 - squashAmount * 0.18
-    readonly property real minimumBodyHeight: Math.max(7, width * 0.55)
-    readonly property real maximumBodyHeight: Math.max(
-        minimumBodyHeight,
-        height - headSize - 16
-    )
-    readonly property real bodyHeight: minimumBodyHeight
-                                            + normalizedBand
-                                            * (maximumBodyHeight - minimumBodyHeight)
-    readonly property real headTop: head.y
-    readonly property real bodyTop: body.y
+    readonly property real normalizedBand:
+        Math.max(0, Math.min(1, bandValue))
+
+    readonly property real normalizedTransient:
+        Math.max(0, Math.min(1, transientValue))
+
+    readonly property real normalizedPeak:
+        Math.max(0, Math.min(1, peakValue))
+
+    /*
+     * The whole cat has one consistent width.
+     * There is no separate wider head or narrower body.
+     */
+    readonly property real catWidth:
+        Math.max(10, width * 0.90)
+
+    readonly property real earHeight:
+        catWidth * 0.34
+
+    readonly property real visibleEarHeight:
+        earHeight * 0.72
+
+    readonly property real maximumCatHeight:
+        Math.max(
+            1,
+            height - visibleEarHeight - 2
+        )
+
+    readonly property real minimumCatHeight:
+        Math.min(
+            maximumCatHeight,
+            Math.max(11, catWidth * 1.10)
+        )
+
+    readonly property real catHeight:
+        minimumCatHeight
+        + normalizedBand
+        * (maximumCatHeight - minimumCatHeight)
+
+    /*
+     * Peak animation.
+     *
+     * The whole rounded rectangle softly squashes from the bottom,
+     * preserving the smooth movement of the previous version.
+     */
+    readonly property real squashAmount:
+        Math.max(0, normalizedPeak - 0.72) / 0.28
+
+    readonly property real squashXScale:
+        1 + squashAmount * 0.12
+
+    readonly property real squashYScale:
+        1 - squashAmount * 0.12
+
+    readonly property real earAngle:
+        normalizedTransient * 11
+
+    readonly property real earSpread:
+        normalizedTransient * catWidth * 0.025
+
+    /*
+     * Compatibility properties.
+     */
+    readonly property real headSize:
+        catWidth
+
+    readonly property real headTop:
+        cat.y - visibleEarHeight
+
+    readonly property real bodyTop:
+        cat.y
+
+    readonly property real bodyHeight:
+        catHeight
 
     objectName: "longCatBar"
 
-    Rectangle {
-        id: body
+    Item {
+        id: cat
 
-        objectName: "longCatBody"
+        width: root.catWidth
+        height: root.catHeight
+
         anchors.bottom: parent.bottom
         anchors.horizontalCenter: parent.horizontalCenter
-        width: Math.max(5, root.width * 0.66)
-        height: root.bodyHeight
-        color: root.fillColor
-        radius: Math.min(width / 2, 7)
-    }
 
-    Item {
-        id: head
-
-        objectName: "longCatHead"
-        width: root.headSize
-        height: root.headSize
-        x: (root.width - width) / 2
-        y: Math.max(7, body.y - height - root.headOffset + 3)
+        transformOrigin: Item.Bottom
 
         transform: Scale {
-            origin.x: head.width / 2
-            origin.y: head.height
-            xScale: 2 - root.squashScale
-            yScale: root.squashScale
+            origin.x: cat.width / 2
+            origin.y: cat.height
+
+            xScale: root.squashXScale
+            yScale: root.squashYScale
 
             Behavior on xScale {
-                NumberAnimation { duration: 90 }
+                NumberAnimation {
+                    duration: 90
+                    easing.type: Easing.OutQuad
+                }
             }
+
             Behavior on yScale {
-                NumberAnimation { duration: 90 }
+                NumberAnimation {
+                    duration: 90
+                    easing.type: Easing.OutQuad
+                }
             }
         }
 
-        Shape {
+        Behavior on height {
+            NumberAnimation {
+                duration: 80
+                easing.type: Easing.OutQuad
+            }
+        }
+
+        /*
+         * The ears are drawn first.
+         *
+         * Their lower parts extend behind the rounded rectangle,
+         * so their bottom edges are hidden and they appear to grow
+         * naturally from the cat's head.
+         */
+        Item {
             id: leftEar
 
-            width: head.width * 0.46
-            height: head.height * 0.45
-            x: -head.width * 0.01
-            y: -height * 0.43
+            width: cat.width * 0.36
+            height: root.earHeight
 
-            transform: Rotation {
-                origin.x: head.width * 0.23
-                origin.y: head.height * 0.45
-                angle: -root.earAngle
+            x: cat.width * 0.09 - root.earSpread
+            y: -root.visibleEarHeight
+
+            transformOrigin: Item.Bottom
+
+            rotation: -root.earAngle
+
+            Behavior on rotation {
+                NumberAnimation {
+                    duration: 80
+                    easing.type: Easing.OutQuad
+                }
             }
 
-            ShapePath {
-                fillColor: root.fillColor
-                strokeColor: root.detailColor
-                strokeWidth: 1
-                startX: 0
-                startY: leftEar.height
-                PathLine { x: leftEar.width * 0.45; y: 0 }
-                PathLine { x: leftEar.width; y: leftEar.height }
-                PathLine { x: 0; y: leftEar.height }
+            Behavior on x {
+                NumberAnimation {
+                    duration: 80
+                    easing.type: Easing.OutQuad
+                }
+            }
+
+            Shape {
+                anchors.fill: parent
+                antialiasing: true
+
+                ShapePath {
+                    fillColor: root.fillColor
+                    strokeColor: root.fillColor
+                    strokeWidth: Math.max(
+                        1,
+                        Math.min(1.6, cat.width * 0.06)
+                    )
+
+                    joinStyle: ShapePath.RoundJoin
+
+                    startX: 0
+                    startY: leftEar.height
+
+                    PathLine {
+                        x: leftEar.width * 0.43
+                        y: 0
+                    }
+
+                    PathLine {
+                        x: leftEar.width
+                        y: leftEar.height
+                    }
+
+                    PathLine {
+                        x: 0
+                        y: leftEar.height
+                    }
+                }
             }
         }
 
-        Shape {
+        Item {
             id: rightEar
 
-            width: head.width * 0.46
-            height: head.height * 0.45
-            x: head.width * 0.55
-            y: -height * 0.43
+            width: cat.width * 0.36
+            height: root.earHeight
 
-            transform: Rotation {
-                origin.x: head.width * 0.23
-                origin.y: head.height * 0.45
-                angle: root.earAngle
-            }
+            x: cat.width * 0.55 + root.earSpread
+            y: -root.visibleEarHeight
 
-            ShapePath {
-                fillColor: root.fillColor
-                strokeColor: root.detailColor
-                strokeWidth: 1
-                startX: 0
-                startY: rightEar.height
-                PathLine { x: rightEar.width * 0.55; y: 0 }
-                PathLine { x: rightEar.width; y: rightEar.height }
-                PathLine { x: 0; y: rightEar.height }
-            }
-        }
+            transformOrigin: Item.Bottom
 
-        Rectangle {
-            anchors.fill: parent
-            color: root.fillColor
-            border.color: root.detailColor
-            radius: width / 2
-        }
+            rotation: root.earAngle
 
-        Row {
-            anchors.horizontalCenter: parent.horizontalCenter
-            anchors.verticalCenter: parent.verticalCenter
-            anchors.verticalCenterOffset: -head.height * 0.08
-            spacing: Math.max(1, head.width * 0.16)
-
-            Repeater {
-                model: 2
-
-                Rectangle {
-                    width: Math.max(1, head.width * 0.08)
-                    height: width
-                    color: root.detailColor
-                    radius: width / 2
+            Behavior on rotation {
+                NumberAnimation {
+                    duration: 80
+                    easing.type: Easing.OutQuad
                 }
+            }
+
+            Behavior on x {
+                NumberAnimation {
+                    duration: 80
+                    easing.type: Easing.OutQuad
+                }
+            }
+
+            Shape {
+                anchors.fill: parent
+                antialiasing: true
+
+                ShapePath {
+                    fillColor: root.fillColor
+                    strokeColor: root.fillColor
+                    strokeWidth: Math.max(
+                        1,
+                        Math.min(1.6, cat.width * 0.06)
+                    )
+
+                    joinStyle: ShapePath.RoundJoin
+
+                    startX: 0
+                    startY: rightEar.height
+
+                    PathLine {
+                        x: rightEar.width * 0.57
+                        y: 0
+                    }
+
+                    PathLine {
+                        x: rightEar.width
+                        y: rightEar.height
+                    }
+
+                    PathLine {
+                        x: 0
+                        y: rightEar.height
+                    }
+                }
+            }
+        }
+
+        /*
+         * This rectangle is simultaneously the head and body.
+         *
+         * Because its width never changes along its height,
+         * the result looks like a long rounded rectangle rather
+         * than a head attached to a narrow neck.
+         */
+        Rectangle {
+            id: body
+
+            objectName: "longCatBody"
+
+            anchors.fill: parent
+
+            color: root.fillColor
+
+            border.color: root.fillColor
+            border.width: Math.max(
+                1,
+                Math.min(1.6, width * 0.06)
+            )
+
+            /*
+             * The radius depends on width rather than height.
+             * A tall cat therefore remains a rounded rectangle
+             * instead of turning into an ellipse.
+             */
+            radius: Math.min(
+                width * 0.28,
+                8
+            )
+
+            antialiasing: true
+        }
+
+        /*
+         * The face stays close to the top of the rectangle,
+         * regardless of how tall the bar becomes.
+         */
+        Item {
+            id: face
+
+            objectName: "longCatHead"
+
+            width: cat.width
+            height: cat.width * 0.50
+
+            y: cat.width * 0.13
+
+            /*
+             * Large circular eyes create the blank, slightly
+             * confused expression from the reference image.
+             */
+            Rectangle {
+                id: leftEye
+
+                width: Math.max(1.8, face.width * 0.16)
+                height: width
+
+                x: face.width * 0.245
+                y: face.width * 0.105
+
+                color: root.detailColor
+                radius: width / 2
+
+                antialiasing: true
+            }
+
+            Rectangle {
+                id: rightEye
+
+                width: Math.max(1.8, face.width * 0.16)
+                height: width
+
+                x: face.width * 0.61
+                y: face.width * 0.105
+
+                color: root.detailColor
+                radius: width / 2
+
+                antialiasing: true
             }
         }
     }

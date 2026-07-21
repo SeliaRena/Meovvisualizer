@@ -22,7 +22,7 @@ ApplicationWindow {
         readonly property color mutedText: "#6F6F78"
         readonly property color border: "#303036"
         readonly property color catFill: "#F7F7F5"
-        readonly property color catDetail: "#D8D8D4"
+        readonly property color catDetail: "#1a1a1a"
         readonly property color disabledContent: "#55555D"
     }
 
