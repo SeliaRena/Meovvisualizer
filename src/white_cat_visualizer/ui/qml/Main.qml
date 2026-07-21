@@ -7,6 +7,7 @@ ApplicationWindow {
     id: root
 
     required property var controller
+    required property var settingsManager
 
     readonly property QtObject theme: QtObject {
         objectName: "themeTokens"
@@ -26,8 +27,8 @@ ApplicationWindow {
     }
 
     visible: true
-    width: 960
-    height: 720
+    width: settingsManager.windowWidth
+    height: settingsManager.windowHeight
     minimumWidth: 520
     minimumHeight: 480
     title: qsTr("White Cat Visualizer")
@@ -35,6 +36,20 @@ ApplicationWindow {
 
     readonly property bool narrow: width < 760
     readonly property real controlsHeight: narrow ? 188 : Math.max(132, Math.min(height * 0.2, 170))
+
+    Component.onCompleted: {
+        if (settingsManager.hasWindowPosition) {
+            root.x = settingsManager.windowX
+            root.y = settingsManager.windowY
+        }
+        sourceControl.forceActiveFocus(Qt.TabFocusReason)
+    }
+    onClosing: settingsManager.saveWindow(root.x, root.y, root.width, root.height)
+
+    Shortcut {
+        sequence: "F12"
+        onActivated: root.controller.debugOverlayEnabled = !root.controller.debugOverlayEnabled
+    }
 
     ColumnLayout {
         anchors.fill: parent
@@ -73,7 +88,10 @@ ApplicationWindow {
                         width: parent.width
                         model: root.controller.sourceNames
                         currentIndex: Math.max(0, root.controller.sourceNames.indexOf(root.controller.source))
+                        activeFocusOnTab: true
                         Accessible.name: qsTr("Audio source")
+                        Accessible.description: qsTr("Select the audio input source")
+                        KeyNavigation.tab: modeControl
                         onActivated: root.controller.source = currentText
 
                         contentItem: Text {
@@ -96,6 +114,7 @@ ApplicationWindow {
                                                       : sourceControl.hovered ? root.theme.hoverSurface
                                                                               : root.theme.elevatedSurface
                             border.color: sourceControl.activeFocus ? root.theme.primaryText : root.theme.border
+                            border.width: sourceControl.activeFocus ? 2 : 1
                             radius: 6
                         }
                         delegate: ItemDelegate {
@@ -138,7 +157,10 @@ ApplicationWindow {
                         width: parent.width
                         model: root.controller.modeNames
                         currentIndex: Math.max(0, root.controller.modeNames.indexOf(root.controller.mode))
+                        activeFocusOnTab: true
                         Accessible.name: qsTr("Visualizer mode")
+                        Accessible.description: qsTr("Select the visualizer appearance")
+                        KeyNavigation.tab: sensitivityControl
                         onActivated: root.controller.mode = currentText
 
                         contentItem: Text {
@@ -161,6 +183,7 @@ ApplicationWindow {
                                                     : modeControl.hovered ? root.theme.hoverSurface
                                                                           : root.theme.elevatedSurface
                             border.color: modeControl.activeFocus ? root.theme.primaryText : root.theme.border
+                            border.width: modeControl.activeFocus ? 2 : 1
                             radius: 6
                         }
                         delegate: ItemDelegate {
@@ -205,7 +228,10 @@ ApplicationWindow {
                         to: 2.0
                         stepSize: 0.1
                         value: root.controller.sensitivity
+                        activeFocusOnTab: true
                         Accessible.name: qsTr("Sensitivity")
+                        Accessible.description: qsTr("Adjust visualizer response strength")
+                        KeyNavigation.tab: runningControl
                         onMoved: root.controller.sensitivity = value
 
                         background: Rectangle {
@@ -328,7 +354,10 @@ ApplicationWindow {
                     width: root.narrow ? 110 : 112
                     height: 48
                     text: root.controller.running ? qsTr("Stop") : qsTr("Start")
+                    activeFocusOnTab: true
                     Accessible.name: text
+                    Accessible.description: qsTr("Start or stop audio visualization")
+                    KeyNavigation.tab: sourceControl
                     onClicked: root.controller.toggleRunning()
 
                     contentItem: Text {
@@ -385,6 +414,34 @@ ApplicationWindow {
                 anchors.topMargin: 24
                 text: root.controller.mode
                 color: root.theme.mutedText
+            }
+
+            Rectangle {
+                id: diagnosticsOverlay
+
+                objectName: "diagnosticsOverlay"
+                anchors.top: parent.top
+                anchors.right: parent.right
+                anchors.margins: 14
+                width: 190
+                height: 76
+                visible: root.controller.debugOverlayEnabled
+                color: root.theme.elevatedSurface
+                border.color: root.theme.border
+                radius: 6
+                Accessible.name: qsTr("Performance diagnostics")
+
+                Label {
+                    anchors.fill: parent
+                    anchors.margins: 10
+                    text: qsTr("FPS: %1\nProcessing: %2 ms\nReplaced frames: %3")
+                          .arg(root.controller.framesPerSecond.toFixed(1))
+                          .arg(root.controller.processingTimeMs.toFixed(2))
+                          .arg(root.controller.replacedFrames)
+                    color: root.theme.secondaryText
+                    font.family: "Consolas"
+                    font.pixelSize: 12
+                }
             }
 
             Row {

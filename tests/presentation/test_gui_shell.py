@@ -127,6 +127,25 @@ def test_shell_uses_documented_monochrome_dark_surfaces(
     del engine
 
 
+def test_release_diagnostics_overlay_is_off_by_default_and_opt_in(
+    application: QGuiApplication,
+) -> None:
+    controller = create_controller()
+    engine = create_engine(controller)
+    root = engine.rootObjects()[0]
+    overlay = root.findChild(QObject, "diagnosticsOverlay")
+
+    assert overlay is not None
+    assert overlay.property("visible") is False
+
+    controller.debugOverlayEnabled = True
+    application.processEvents()
+
+    assert overlay.property("visible") is True
+
+    del engine
+
+
 def test_shell_renders_all_fixed_visualizers_and_separate_levels(
     application: QGuiApplication,
 ) -> None:

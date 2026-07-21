@@ -92,6 +92,8 @@ def test_worker_coalesces_a_high_rate_source_into_one_pending_update() -> None:
 
     assert worker.capacity == 1
     assert notifications == [None]
+    assert worker.replaced_frame_count > 0
+    assert worker.processing_time_ms >= 0.0
     update = worker.take_latest()
     assert isinstance(update, VisualizerFrame)
     assert update.rms > 0.001

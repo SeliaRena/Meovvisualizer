@@ -4,6 +4,7 @@ from collections.abc import Callable
 from dataclasses import dataclass
 from enum import StrEnum
 from threading import Event, Lock, Thread, current_thread
+from time import perf_counter
 
 from white_cat_visualizer.analysis.frame import VisualizerFrame
 from white_cat_visualizer.analysis.spectrum import SpectrumAnalyzer
@@ -45,6 +46,8 @@ class AnalysisWorker:
         self._lifecycle_lock = Lock()
         self._thread: Thread | None = None
         self._shutdown = False
+        self._diagnostics_lock = Lock()
+        self._processing_time_ms = 0.0
 
     @property
     def capacity(self) -> int:
@@ -56,6 +59,15 @@ class AnalysisWorker:
             thread = self._thread
             return thread is not None and thread.is_alive()
 
+    @property
+    def processing_time_ms(self) -> float:
+        with self._diagnostics_lock:
+            return self._processing_time_ms
+
+    @property
+    def replaced_frame_count(self) -> int:
+        return self._updates.replacement_count
+
     def start(self) -> None:
         with self._lifecycle_lock:
             if self._shutdown:
@@ -64,6 +76,9 @@ class AnalysisWorker:
                 return
 
             self._updates.clear()
+            self._updates.reset_statistics()
+            with self._diagnostics_lock:
+                self._processing_time_ms = 0.0
             self._stop_requested.clear()
             thread = Thread(
                 target=self._run,
@@ -114,7 +129,9 @@ class AnalysisWorker:
                     return
 
                 try:
+                    analysis_started = perf_counter()
                     visualizer_frame = self._analyzer.analyze(audio_frame)
+                    processing_time_ms = (perf_counter() - analysis_started) * 1_000.0
                 except Exception as error:
                     self._publish_failure(WorkerFailureStage.ANALYSIS, error)
                     return
@@ -122,6 +139,8 @@ class AnalysisWorker:
                 if self._stop_requested.is_set():
                     return
 
+                with self._diagnostics_lock:
+                    self._processing_time_ms = processing_time_ms
                 self._publish(visualizer_frame)
                 self._stop_requested.wait(audio_frame.duration_seconds)
         finally:

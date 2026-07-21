@@ -5,7 +5,7 @@ build-backend = "hatchling.build"
 [project]
 name = "white-cat-visualizer"
 version = "0.1.0"
-description = "Compact Codex-first starter for a minimal white cat music visualizer"
+description = "Minimal Windows system-audio visualizer with animated white cats"
 readme = "README.md"
 requires-python = ">=3.11"
 dependencies = [
@@ -25,6 +25,11 @@ gui = [
   "PySide6>=6.8",
 ]
 windows-audio = [
+  "PyAudioWPatch>=0.2.12.5; platform_system == 'Windows'",
+]
+release = [
+  "PyInstaller>=6.10",
+  "PySide6>=6.8",
   "PyAudioWPatch>=0.2.12.5; platform_system == 'Windows'",
 ]
 

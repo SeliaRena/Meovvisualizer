@@ -1,45 +1,61 @@
-# White Cat Visualizer — Compact Codex Starter
+# White Cat Visualizer
 
-A small Python 3.11 + PySide6/QML starter for a white cat music visualizer. It includes a tested deterministic audio core, three focused Codex skills, six phase prompts, and one verification command.
+A small Windows desktop music visualizer built with Python 3.11, PySide6/QML, NumPy, and WASAPI loopback. It renders a reference spectrum plus two white-cat visualizers in a compact dark interface. Deterministic synthetic sources are always included, so the application remains usable without audio hardware or the Windows capture dependency.
 
-## Setup on Windows PowerShell
+## Run from source on Windows
+
+In PowerShell from the repository root:
 
 ```powershell
 py -3.11 -m venv .venv
 .\.venv\Scripts\Activate.ps1
 python -m pip install --upgrade pip
-python -m pip install -e ".[dev,gui]"
-python scripts/verify.py
+python -m pip install -e ".[gui,windows-audio]"
+white-cat-visualizer
 ```
 
-Install the Windows loopback dependency only for Phase 5:
+Choose an audio source and visualizer, adjust sensitivity, then select **Start**. The source, visualizer, sensitivity, window size, and window position are restored on the next launch. Settings are stored in `%LOCALAPPDATA%\WhiteCatVisualizer\settings.json`.
+
+All controls support keyboard focus and activation. Use Tab and Shift+Tab to move between controls, arrow keys to change combo boxes and sensitivity, and Space or Enter to activate the focused control. F12 toggles the diagnostic overlay; it is always off at startup.
+
+If Windows audio capture is unavailable, the application reports the backend problem and keeps all synthetic sources available. A missing saved audio device, unreadable settings file, or invalid settings value produces a runtime warning and falls back to a safe default rather than preventing startup.
+
+## Verify a development checkout
 
 ```powershell
 python -m pip install -e ".[dev,gui,windows-audio]"
-```
-
-## Existing harness
-
-```powershell
 python scripts/verify.py
-python scripts/visual_demo.py --mode bass-pulse
 python scripts/benchmark_analysis.py
 ```
 
-The current core provides deterministic PCM sources, FFT/log-band analysis, attack/release smoothing, normalized immutable frames, tests, smoke checks, and a benchmark. GUI and Windows capture are intentionally added phase by phase.
+The verification command runs formatting, linting, strict type checks, unit and GUI tests, core and GUI smoke tests, and QML linting when Qt's `qmllint` executable is available.
 
-## Codex workflow
+## Build the Windows release folder
 
-From the repository root:
+Create a clean release environment and run the documented build script:
 
-```text
-Use $implement-slice. Implement prompts/01-shell.md exactly. Read only the files it references. Stop after this phase.
+```powershell
+py -3.11 -m venv .venv-release
+.\.venv-release\Scripts\Activate.ps1
+python -m pip install --upgrade pip
+python -m pip install -e ".[release]"
+.\scripts\build_windows.ps1
+.\dist\WhiteCatVisualizer\WhiteCatVisualizer.exe
 ```
 
-Then use a separate review thread:
+The default build includes the runtime SVG icon and QML files. To apply a Windows executable icon, supply a project-specific `.ico` file through the build hook:
 
-```text
-Use $verify-change. Review Phase 1 against prompts/01-shell.md. Do not modify files.
+```powershell
+.\scripts\build_windows.ps1 -IconPath .\branding\white-cat.ico
 ```
 
-Continue in the order listed in `prompts/README.md`. The complete Traditional Chinese operating guide is `GUIDE_zh-TW.md`; Codex is instructed not to read it during normal implementation.
+The output is an unsigned PyInstaller one-folder application, not an installer. Test the generated executable on the minimum Windows version you intend to support before distribution.
+
+## Known limitations
+
+- Windows capture records the system mix for one selected output endpoint. Per-application capture is not supported.
+- Output endpoints are enumerated only at startup. Restart after adding, removing, enabling, or disabling a device.
+- The release is not code-signed and has no installer or automatic updater; Windows may display reputation warnings.
+- The FPS value is a smoothed UI-delivery estimate. Processing time covers spectrum analysis, and replaced frames count stale worker results discarded during the current run.
+- Settings write failures do not interrupt visualization, but changes from that session will not persist.
+- There is no recording, cloud sync, plugin system, or alternate theme.

@@ -3,6 +3,7 @@ from __future__ import annotations
 from collections.abc import Sequence
 from dataclasses import dataclass
 from enum import StrEnum
+from time import perf_counter
 
 from PySide6.QtCore import Property, QObject, Qt, Signal, Slot
 
@@ -38,6 +39,8 @@ class VisualizerController(QObject):
     bandsChanged = Signal()
     rmsChanged = Signal()
     peakChanged = Signal()
+    diagnosticsChanged = Signal()
+    debugOverlayEnabledChanged = Signal()
     _runtimeUpdateAvailable = Signal()
 
     _MODE_NAMES = ("Reference bars", "Long cats", "Bouncing cats")
@@ -49,6 +52,8 @@ class VisualizerController(QObject):
         analyzer: SpectrumAnalyzer,
         *,
         initial_source_id: str | None = None,
+        initial_mode: str | None = None,
+        initial_sensitivity: float = 1.0,
         parent: QObject | None = None,
     ) -> None:
         super().__init__(parent)
@@ -76,13 +81,18 @@ class VisualizerController(QObject):
         self._source_by_name = source_by_name
         self._selected_source = selected_source
         self._analyzer = analyzer
-        self._mode = self._MODE_NAMES[0]
-        self._sensitivity = 1.0
+        self._mode = initial_mode if initial_mode in self._MODE_NAMES else self._MODE_NAMES[0]
+        self._sensitivity = min(max(initial_sensitivity, 0.5), 2.0)
         self._running = False
         self._error_state: ControllerErrorState | None = None
         self._bands = [0.0] * self._BAND_COUNT
         self._rms = 0.0
         self._peak = 0.0
+        self._frames_per_second = 0.0
+        self._processing_time_ms = 0.0
+        self._replaced_frames = 0
+        self._last_delivery_time: float | None = None
+        self._debug_overlay_enabled = False
         self._latest_frame: VisualizerFrame | None = None
         self._worker = self._create_worker()
 
@@ -97,6 +107,10 @@ class VisualizerController(QObject):
             self._analyzer,
             on_update_available=self._runtimeUpdateAvailable.emit,
         )
+
+    @classmethod
+    def mode_names(cls) -> tuple[str, ...]:
+        return cls._MODE_NAMES
 
     def _get_source_names(self) -> list[str]:
         return [source.display_name for source in self._sources]
@@ -125,6 +139,10 @@ class VisualizerController(QObject):
             self._running = True
 
     source = Property(str, _get_source, _set_source, notify=sourceChanged)
+
+    @Property(str, notify=sourceChanged)
+    def sourceId(self) -> str:
+        return self._selected_source.source_id
 
     def _get_mode_names(self) -> list[str]:
         return list(self._MODE_NAMES)
@@ -167,6 +185,34 @@ class VisualizerController(QObject):
     def peak(self) -> float:
         return self._peak
 
+    @Property(float, notify=diagnosticsChanged)
+    def framesPerSecond(self) -> float:
+        return self._frames_per_second
+
+    @Property(float, notify=diagnosticsChanged)
+    def processingTimeMs(self) -> float:
+        return self._processing_time_ms
+
+    @Property(int, notify=diagnosticsChanged)
+    def replacedFrames(self) -> int:
+        return self._replaced_frames
+
+    def _get_debug_overlay_enabled(self) -> bool:
+        return self._debug_overlay_enabled
+
+    def _set_debug_overlay_enabled(self, value: bool) -> None:
+        if value == self._debug_overlay_enabled:
+            return
+        self._debug_overlay_enabled = value
+        self.debugOverlayEnabledChanged.emit()
+
+    debugOverlayEnabled = Property(
+        bool,
+        _get_debug_overlay_enabled,
+        _set_debug_overlay_enabled,
+        notify=debugOverlayEnabledChanged,
+    )
+
     def _get_bands(self) -> list[float]:
         return list(self._bands)
 
@@ -193,6 +239,7 @@ class VisualizerController(QObject):
 
     def _start(self) -> None:
         self._reset_output()
+        self._reset_diagnostics()
         self._set_error_state(None)
         self._worker.start()
         self._running = True
@@ -223,6 +270,7 @@ class VisualizerController(QObject):
             return
         self._latest_frame = update
         self._publish_latest_frame()
+        self._update_diagnostics()
 
     def _handle_worker_failure(self, failure: WorkerFailure) -> None:
         self._running = False
@@ -251,6 +299,36 @@ class VisualizerController(QObject):
     def _reset_output(self) -> None:
         self._latest_frame = None
         self._set_output([0.0] * self._BAND_COUNT, 0.0, 0.0)
+
+    def _reset_diagnostics(self) -> None:
+        changed = any(
+            (
+                self._frames_per_second != 0.0,
+                self._processing_time_ms != 0.0,
+                self._replaced_frames != 0,
+            )
+        )
+        self._frames_per_second = 0.0
+        self._processing_time_ms = 0.0
+        self._replaced_frames = 0
+        self._last_delivery_time = None
+        if changed:
+            self.diagnosticsChanged.emit()
+
+    def _update_diagnostics(self) -> None:
+        delivery_time = perf_counter()
+        if self._last_delivery_time is not None:
+            elapsed = delivery_time - self._last_delivery_time
+            if elapsed > 0.0:
+                current_fps = 1.0 / elapsed
+                if self._frames_per_second == 0.0:
+                    self._frames_per_second = current_fps
+                else:
+                    self._frames_per_second = self._frames_per_second * 0.8 + current_fps * 0.2
+        self._last_delivery_time = delivery_time
+        self._processing_time_ms = self._worker.processing_time_ms
+        self._replaced_frames = self._worker.replaced_frame_count
+        self.diagnosticsChanged.emit()
 
     def _set_error_state(self, value: ControllerErrorState | None) -> None:
         if value == self._error_state:

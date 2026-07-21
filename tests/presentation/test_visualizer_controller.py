@@ -93,6 +93,27 @@ def test_controller_starts_with_deterministic_render_ready_state(
     assert controller.error == ""
     assert controller.errorCode == ""
     assert controller.error_state is None
+    assert controller.debugOverlayEnabled is False
+    assert controller.framesPerSecond == 0.0
+    assert controller.processingTimeMs == 0.0
+    assert controller.replacedFrames == 0
+
+
+def test_controller_accepts_persisted_release_preferences() -> None:
+    sources = tuple(SyntheticAudioSource(mode) for mode in SyntheticMode)
+    controller = VisualizerController(
+        sources,
+        SpectrumAnalyzer(),
+        initial_source_id="synthetic:frequency-sweep",
+        initial_mode="Bouncing cats",
+        initial_sensitivity=1.6,
+    )
+
+    assert controller.sourceId == "synthetic:frequency-sweep"
+    assert controller.mode == "Bouncing cats"
+    assert controller.sensitivity == 1.6
+
+    controller.shutdown()
 
 
 def test_controller_accepts_only_documented_visualizer_modes(
@@ -226,3 +247,18 @@ def test_stopped_controller_ignores_queued_runtime_delivery(
     assert controller.bands == [0.0] * 24
     assert controller.rms == 0.0
     assert controller.peak == 0.0
+
+
+def test_debug_overlay_is_opt_in_and_runtime_diagnostics_are_bounded(
+    make_controller: Callable[..., VisualizerController],
+) -> None:
+    controller = make_controller(SyntheticMode.SEEDED_NOISE)
+
+    controller.debugOverlayEnabled = True
+    controller.toggleRunning()
+    wait_until(lambda: controller.processingTimeMs > 0.0)
+
+    assert controller.debugOverlayEnabled is True
+    assert controller.framesPerSecond >= 0.0
+    assert controller.processingTimeMs > 0.0
+    assert controller.replacedFrames >= 0
