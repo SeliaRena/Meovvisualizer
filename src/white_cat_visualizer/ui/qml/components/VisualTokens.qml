@@ -30,7 +30,7 @@ QtObject {
 
     // These existing values feed protected visualizer delegates and must not change.
     readonly property color catFill: "#F7F7F5"
-    readonly property color catDetail: "#D8D8D4"
+    readonly property color catDetail: "#0a0a0a"
 
     readonly property int panelRadius: 20
     readonly property int controlRadius: 8

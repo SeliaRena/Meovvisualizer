@@ -15,9 +15,15 @@ ApplicationWindow {
         id: theme
     }
 
+    FontMetrics {
+        id: errorFontMetrics
+
+        font.pixelSize: 12
+    }
+
     visible: true
-    width: settingsManager.windowWidth
-    height: settingsManager.windowHeight
+    width: Math.max(settingsManager.windowWidth, minimumWidth)
+    height: Math.max(settingsManager.windowHeight, minimumHeight)
     minimumWidth: 520
     minimumHeight: Math.max(480, Math.ceil(requiredWindowHeight))
     title: qsTr("Meovvisualizer")
@@ -33,28 +39,56 @@ ApplicationWindow {
     readonly property int resizeHandleThickness: 7
     readonly property int resizeCornerSize: 14
 
-    // Stable vertical contracts. The minimum window height is derived from
-    // real content rather than assuming that the narrow and wide layouts
-    // require the same amount of space.
+    // Stable vertical contracts.
+    //
+    // startSystemResize() delegates the interactive resize to Windows. Windows
+    // reads the window's minimum tracking size when that operation begins.
+    // Therefore the minimum height must remain invariant while the width crosses
+    // the wide/narrow breakpoint; a live controlsFlow.implicitHeight value is
+    // not suitable for the native minimum-size contract.
     readonly property int titleBarHeight: 36
     readonly property int mainLayoutSpacing: 8
     readonly property int separatorHeight: 1
     readonly property int minimumCanvasHeight: 300
     readonly property int visualizerTopInset: 48
     readonly property int visualizerBottomInset: 12
+
+    readonly property real wideControlsMinimumHeight:
+        Math.max(
+            sourceGroup.implicitHeight,
+            modeGroup.implicitHeight,
+            sensitivityGroup.implicitHeight,
+            levelGroup.implicitHeight,
+            runningGroup.implicitHeight
+        )
+
+    readonly property real narrowControlsMinimumHeight:
+        Math.max(sourceGroup.implicitHeight, modeGroup.implicitHeight)
+        + Math.max(sensitivityGroup.implicitHeight, levelGroup.implicitHeight)
+        + runningGroup.implicitHeight
+        + 2 * controlsFlow.rowSpacing
+
+    readonly property real reservedErrorHeight:
+        Math.max(1, Math.ceil(errorFontMetrics.height))
+
+    readonly property real stableControlsMinimumHeight:
+        Math.max(wideControlsMinimumHeight, narrowControlsMinimumHeight)
+        + controlSurface.spacing
+        + reservedErrorHeight
+
     readonly property real requiredContentHeight:
         titleBarHeight
-        + controlsHeight
+        + stableControlsMinimumHeight
         + separatorHeight
         + minimumCanvasHeight
         + 3 * mainLayoutSpacing
         + 2 * theme.panelPadding
+
     readonly property real requiredWindowHeight:
         requiredContentHeight + 2 * theme.outerInset
 
     // Compatibility properties retained for tests and diagnostics.
-    // The layout itself is now content-driven rather than based on magic heights.
-    readonly property real minimumControlsHeight: controlsFlow.implicitHeight
+    readonly property real minimumControlsHeight: stableControlsMinimumHeight
     readonly property real controlsContentHeight: controlSurface.implicitHeight
     readonly property real controlsHeight: controlSurface.implicitHeight
 
@@ -262,6 +296,8 @@ ApplicationWindow {
 
                 objectName: "controlSurface"
                 Layout.fillWidth: true
+                Layout.minimumHeight: implicitHeight
+                Layout.preferredHeight: implicitHeight
                 spacing: 8
 
                 GridLayout {
@@ -274,6 +310,8 @@ ApplicationWindow {
                     rowSpacing: 8
 
                     ColumnLayout {
+                        id: sourceGroup
+
                         Layout.row: 0
                         Layout.column: 0
                         Layout.fillWidth: true
@@ -373,6 +411,8 @@ ApplicationWindow {
                     }
 
                     ColumnLayout {
+                        id: modeGroup
+
                         Layout.row: 0
                         Layout.column: 1
                         Layout.fillWidth: true
@@ -470,6 +510,8 @@ ApplicationWindow {
                     }
 
                     ColumnLayout {
+                        id: sensitivityGroup
+
                         Layout.row: root.narrow ? 1 : 0
                         Layout.column: root.narrow ? 0 : 2
                         Layout.fillWidth: true
@@ -540,6 +582,8 @@ ApplicationWindow {
                     }
 
                     ColumnLayout {
+                        id: levelGroup
+
                         Layout.row: root.narrow ? 1 : 0
                         Layout.column: root.narrow ? 1 : 3
                         Layout.fillWidth: true
@@ -632,6 +676,8 @@ ApplicationWindow {
                     }
 
                     ColumnLayout {
+                        id: runningGroup
+
                         Layout.row: root.narrow ? 2 : 0
                         Layout.column: root.narrow ? 0 : 4
                         Layout.columnSpan: root.narrow ? 2 : 1
@@ -725,6 +771,7 @@ ApplicationWindow {
                 Layout.fillWidth: true
                 Layout.fillHeight: true
                 Layout.minimumHeight: root.minimumCanvasHeight
+                Layout.preferredHeight: root.minimumCanvasHeight
                 color: theme.canvasTint
                 radius: theme.controlRadius
                 clip: true
