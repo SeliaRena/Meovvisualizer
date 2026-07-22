@@ -17,6 +17,7 @@ application_module = pytest.importorskip("white_cat_visualizer.app")
 QObject = qt_core.QObject
 QColor = qt_gui.QColor
 QGuiApplication = qt_gui.QGuiApplication
+QPointF = qt_core.QPointF
 QQuickItem = qt_quick.QQuickItem
 QEventLoop = qt_core.QEventLoop
 QTimer = qt_core.QTimer
@@ -104,7 +105,7 @@ def test_shell_loads_and_keeps_canvas_usable_at_supported_sizes(
     del engine
 
 
-def test_shell_uses_documented_monochrome_dark_surfaces(
+def test_shell_uses_centralized_tint_glass_tokens(
     application: QGuiApplication,
 ) -> None:
     controller = create_controller()
@@ -112,17 +113,104 @@ def test_shell_uses_documented_monochrome_dark_surfaces(
     root = engine.rootObjects()[0]
 
     theme = root.findChild(QObject, "themeTokens")
+    main_surface = root.findChild(QObject, "mainGlassSurface")
     controls = root.findChild(QObject, "controlSurface")
     canvas = root.findChild(QObject, "visualizerCanvas")
 
     assert theme is not None
+    assert main_surface is not None
     assert controls is not None
     assert canvas is not None
-    assert root.property("color") == QColor("#0D0D0F")
-    assert controls.property("color") == QColor("#161619")
-    assert canvas.property("color") == QColor("#111113")
-    assert theme.property("primaryText") == QColor("#F5F5F5")
-    assert theme.property("border") == QColor("#303036")
+    assert root.property("color") == QColor("transparent")
+    assert main_surface.property("color") == QColor("#C20B0912")
+    assert canvas.property("color") == QColor("#24171327")
+    assert theme.property("primaryText") == QColor("#F7F7FA")
+    assert theme.property("standardBorder") == QColor("#32FFFFFF")
+    assert theme.property("accent") == QColor("#A491FF")
+    assert theme.property("transitionDuration") == 140
+
+    assert main_surface.property("x") >= 12
+    assert main_surface.property("y") >= 12
+    assert controls.property("width") == pytest.approx(canvas.property("width"))
+
+    del engine
+
+
+def test_glass_frame_tracks_root_geometry_across_responsive_breakpoint(
+    application: QGuiApplication,
+) -> None:
+    controller = create_controller()
+    engine = create_engine(controller)
+    root = engine.rootObjects()[0]
+    main_surface = root.findChild(QObject, "mainGlassSurface")
+
+    assert main_surface is not None
+    expected_fill = QColor("#C20B0912")
+    outer_inset = 12
+
+    for width, height in (
+        (758, 620),
+        (759, 621),
+        (760, 622),
+        (761, 623),
+        (900, 480),
+        (740, 760),
+        (960, 540),
+    ):
+        root.setProperty("width", width)
+        root.setProperty("height", height)
+        application.processEvents()
+
+        assert root.findChild(QObject, "mainGlassSurface") == main_surface
+        assert root.property("width") == pytest.approx(width)
+        assert root.property("height") == pytest.approx(height)
+        assert root.property("opacity") == pytest.approx(1.0)
+        assert main_surface.property("x") == pytest.approx(outer_inset)
+        assert main_surface.property("y") == pytest.approx(outer_inset)
+        assert main_surface.property("width") == pytest.approx(width - 2 * outer_inset)
+        assert main_surface.property("height") == pytest.approx(height - 2 * outer_inset)
+        assert main_surface.property("visible") is True
+        assert main_surface.property("clip") is False
+        assert main_surface.property("opacity") == pytest.approx(1.0)
+        assert main_surface.property("color") == expected_fill
+
+    del engine
+
+
+def test_wrapped_controls_stay_above_visualizer(
+    application: QGuiApplication,
+) -> None:
+    controller = create_controller()
+    engine = create_engine(controller)
+    root = engine.rootObjects()[0]
+    controls = root.findChild(QQuickItem, "controlSurface")
+    controls_flow = root.findChild(QQuickItem, "controlsFlow")
+    running_control = root.findChild(QQuickItem, "runningControl")
+    canvas = root.findChild(QQuickItem, "visualizerCanvas")
+
+    assert controls is not None
+    assert controls_flow is not None
+    assert running_control is not None
+    assert canvas is not None
+
+    for width in (520, 700, 759, 760, 800, 895, 896, 960):
+        root.setProperty("width", width)
+        root.setProperty("height", 600)
+        application.processEvents()
+
+        controls_top = controls.mapToScene(QPointF()).y()
+        controls_bottom = controls_top + controls.property("height")
+        button_top = running_control.mapToScene(QPointF()).y()
+        button_bottom = button_top + running_control.property("height")
+        canvas_top = canvas.mapToScene(QPointF()).y()
+
+        assert controls.property("height") >= controls_flow.property("implicitHeight")
+        assert button_top >= controls_top
+        assert button_bottom <= controls_bottom + 0.5
+        assert running_control.property("width") >= 96
+        assert running_control.property("height") == pytest.approx(40)
+        assert canvas_top >= controls_bottom
+        assert root.property("narrow") is (width < 896)
 
     del engine
 
@@ -142,6 +230,42 @@ def test_release_diagnostics_overlay_is_off_by_default_and_opt_in(
     application.processEvents()
 
     assert overlay.property("visible") is True
+
+    del engine
+
+
+def test_primary_controls_have_readable_disabled_states(
+    application: QGuiApplication,
+) -> None:
+    controller = create_controller()
+    engine = create_engine(controller)
+    root = engine.rootObjects()[0]
+
+    source_control = root.findChild(QObject, "sourceControl")
+    source_background = root.findChild(QObject, "sourceControlBackground")
+    source_text = root.findChild(QObject, "sourceControlText")
+    running_control = root.findChild(QObject, "runningControl")
+    running_background = root.findChild(QObject, "runningControlBackground")
+    running_text = root.findChild(QObject, "runningControlText")
+
+    assert source_control is not None
+    assert source_background is not None
+    assert source_text is not None
+    assert running_control is not None
+    assert running_background is not None
+    assert running_text is not None
+
+    source_control.setProperty("enabled", False)
+    running_control.setProperty("enabled", False)
+    wait_until(
+        lambda: (
+            source_background.property("color") == QColor("#1AFFFFFF")
+            and running_background.property("color") == QColor("#1AFFFFFF")
+        )
+    )
+
+    assert source_text.property("color") == QColor("#5F5B68")
+    assert running_text.property("color") == QColor("#5F5B68")
 
     del engine
 
