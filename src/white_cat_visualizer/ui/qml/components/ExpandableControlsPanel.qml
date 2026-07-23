@@ -16,7 +16,14 @@ Item {
     property string marqueeText: qsTr("Vibing mode")
     property int headerHeight: 28
     property int contentPadding: 10
-    property int collapsedBodyHeight: 38
+    property int collapsedPadding: 5
+
+    /*
+     * This remains externally overridable, but its default is now derived from
+     * the marquee rather than fixed at 38 pixels.
+     */
+    property real collapsedBodyHeight:
+        marquee.implicitHeight + 2 * collapsedPadding
 
     readonly property real expandedChromeHeight:
         headerHeight + 2 * contentPadding
@@ -144,9 +151,10 @@ Item {
         anchors.right: parent.right
         anchors.top: toggleButton.bottom
         anchors.bottom: parent.bottom
-        anchors.leftMargin: 5
-        anchors.rightMargin: 5
-        anchors.bottomMargin: 5
+        anchors.leftMargin: root.collapsedPadding
+        anchors.rightMargin: root.collapsedPadding
+        anchors.topMargin: root.collapsedPadding
+        anchors.bottomMargin: root.collapsedPadding
         visible: !root.expanded || opacity > 0.001
         enabled: !root.expanded
         opacity: root.expanded ? 0.0 : 1.0

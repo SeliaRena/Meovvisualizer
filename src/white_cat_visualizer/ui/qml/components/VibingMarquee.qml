@@ -10,17 +10,30 @@ Item {
     property string text: qsTr("Vibing mode")
     property color textColor: "#FFFFFF"
     property color catColor: "#FFFFFF"
+    property color catOutlineColor: "#17152F"
+    property color catShadeColor: "#CAD3DC"
+    property color catCheekColor: "#F0A9B5"
     property color trailColor: "#FFFFFF"
+    property real catAnimationSpeed: 1.0
     property int trailDotCount: 7
     property real trailLength: 44
     property real catTextGap: 7
     property real pixelsPerSecond: 126
+    property real verticalPadding: 4
+    property real horizontalPadding: 2
 
     property real travelProgress: 0.0
     property real trailPhase: 0.0
 
+    /*
+     * The marquee no longer assumes a fixed compact height. Its natural height
+     * is owned by the cat, with only enough padding for the walking bob.
+     */
+    implicitHeight: walkingCat.implicitHeight + 2 * verticalPadding
+    implicitWidth: runnerWidth + 2 * horizontalPadding
+
     readonly property real runnerWidth:
-        trailLength + runningCat.width + catTextGap + marqueeLabel.implicitWidth
+        trailLength + walkingCat.width + catTextGap + marqueeLabel.implicitWidth
 
     clip: true
 
@@ -32,25 +45,13 @@ Item {
         trailPhase = 0.0
         travelAnimation.restart()
         trailAnimation.restart()
-        bobAnimation.restart()
-        frontLegAnimation.restart()
-        backLegAnimation.restart()
-        tailAnimation.restart()
     }
 
     function stopAnimations() {
         travelAnimation.stop()
         trailAnimation.stop()
-        bobAnimation.stop()
-        frontLegAnimation.stop()
-        backLegAnimation.stop()
-        tailAnimation.stop()
         travelProgress = 0.0
         trailPhase = 0.0
-        runningCat.bobOffset = 0.0
-        frontLeg.rotation = -18
-        backLeg.rotation = 18
-        catTail.rotation = -18
     }
 
     onActiveChanged: {
@@ -69,7 +70,7 @@ Item {
         id: runner
 
         width: root.runnerWidth
-        height: parent.height
+        height: root.height
         x: -width + root.travelProgress * (root.width + width)
 
         Repeater {
@@ -81,14 +82,16 @@ Item {
                 readonly property real age:
                     (root.trailPhase + index / root.trailDotCount) % 1.0
                 readonly property real sizeFactor: 1.0 - age
+                readonly property real catCenterY:
+                    walkingCat.y + walkingCat.height * 0.56
 
-                x: root.trailLength - 3 - age * root.trailLength
+                x: root.trailLength - 4 - age * root.trailLength - 10
                 y: Math.round(
-                       runner.height / 2
+                       catCenterY
                        + ((index % 3) - 1) * 3
                        - height / 2
                    )
-                width: Math.max(1, 5 * sizeFactor)
+                width: Math.max(1, Math.round(5 * sizeFactor))
                 height: width
                 opacity: sizeFactor * sizeFactor
                 color: root.trailColor
@@ -96,109 +99,27 @@ Item {
             }
         }
 
-        Item {
-            id: runningCat
-
-            property real bobOffset: 0.0
+        SimpleWalkingCat {
+            id: walkingCat
 
             x: root.trailLength
-            y: Math.round((runner.height - height) / 2 + bobOffset)
-            width: 32
-            height: 23
-
-            Rectangle {
-                id: catTail
-
-                x: 0
-                y: 9
-                width: 10
-                height: 3
-                color: root.catColor
-                radius: 1.5
-                transformOrigin: Item.Right
-                rotation: -18
-            }
-
-            Rectangle {
-                x: 6
-                y: 7
-                width: 19
-                height: 11
-                color: root.catColor
-                radius: 5
-            }
-
-            Rectangle {
-                x: 21
-                y: 4
-                width: 10
-                height: 11
-                color: root.catColor
-                radius: 4
-            }
-
-            Rectangle {
-                x: 21
-                y: 2
-                width: 5
-                height: 5
-                color: root.catColor
-                rotation: 45
-            }
-
-            Rectangle {
-                x: 27
-                y: 2
-                width: 5
-                height: 5
-                color: root.catColor
-                rotation: 45
-            }
-
-            Rectangle {
-                x: 28
-                y: 8
-                width: 1.5
-                height: 1.5
-                color: "#17131D"
-                radius: 0.75
-            }
-
-            Rectangle {
-                id: backLeg
-
-                x: 9
-                y: 15
-                width: 3
-                height: 7
-                color: root.catColor
-                radius: 1
-                transformOrigin: Item.Top
-                rotation: 18
-            }
-
-            Rectangle {
-                id: frontLeg
-
-                x: 22
-                y: 15
-                width: 3
-                height: 7
-                color: root.catColor
-                radius: 1
-                transformOrigin: Item.Top
-                rotation: -18
-            }
+            y: Math.round((runner.height - height) / 2)
+            running: root.active
+            fillColor: root.catColor
+            outlineColor: root.catOutlineColor
+            shadeColor: root.catShadeColor
+            cheekColor: root.catCheekColor
+            animationSpeed: root.catAnimationSpeed
         }
 
         Label {
             id: marqueeLabel
 
-            x: runningCat.x + runningCat.width + root.catTextGap
-            anchors.verticalCenter: parent.verticalCenter
+            x: walkingCat.x + walkingCat.width + root.catTextGap
+            anchors.verticalCenter: walkingCat.verticalCenter
             text: root.text
             color: root.textColor
-            font.pixelSize: 13
+            font.pixelSize: 14
             font.weight: Font.DemiBold
             font.letterSpacing: 0.8
             verticalAlignment: Text.AlignVCenter
@@ -231,93 +152,5 @@ Item {
         duration: 760
         loops: Animation.Infinite
         easing.type: Easing.Linear
-    }
-
-    SequentialAnimation {
-        id: bobAnimation
-        loops: Animation.Infinite
-
-        NumberAnimation {
-            target: runningCat
-            property: "bobOffset"
-            from: 0.0
-            to: -2.0
-            duration: 105
-            easing.type: Easing.OutQuad
-        }
-        NumberAnimation {
-            target: runningCat
-            property: "bobOffset"
-            from: -2.0
-            to: 0.0
-            duration: 105
-            easing.type: Easing.InQuad
-        }
-    }
-
-    SequentialAnimation {
-        id: frontLegAnimation
-        loops: Animation.Infinite
-
-        NumberAnimation {
-            target: frontLeg
-            property: "rotation"
-            from: -24
-            to: 24
-            duration: 110
-            easing.type: Easing.InOutQuad
-        }
-        NumberAnimation {
-            target: frontLeg
-            property: "rotation"
-            from: 24
-            to: -24
-            duration: 110
-            easing.type: Easing.InOutQuad
-        }
-    }
-
-    SequentialAnimation {
-        id: backLegAnimation
-        loops: Animation.Infinite
-
-        NumberAnimation {
-            target: backLeg
-            property: "rotation"
-            from: 24
-            to: -24
-            duration: 110
-            easing.type: Easing.InOutQuad
-        }
-        NumberAnimation {
-            target: backLeg
-            property: "rotation"
-            from: -24
-            to: 24
-            duration: 110
-            easing.type: Easing.InOutQuad
-        }
-    }
-
-    SequentialAnimation {
-        id: tailAnimation
-        loops: Animation.Infinite
-
-        NumberAnimation {
-            target: catTail
-            property: "rotation"
-            from: -24
-            to: 4
-            duration: 170
-            easing.type: Easing.InOutSine
-        }
-        NumberAnimation {
-            target: catTail
-            property: "rotation"
-            from: 4
-            to: -24
-            duration: 170
-            easing.type: Easing.InOutSine
-        }
     }
 }
