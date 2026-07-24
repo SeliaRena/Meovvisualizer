@@ -21,6 +21,12 @@ ApplicationWindow {
         font.pixelSize: 12
     }
 
+    FontLoader {
+        id: soraFont
+
+        source: "../Sora-Regular.ttf"
+    }
+
     visible: true
     width: Math.max(settingsManager.windowWidth, minimumWidth)
     height: Math.max(settingsManager.windowHeight, minimumHeight)
@@ -175,8 +181,9 @@ ApplicationWindow {
                             anchors.verticalCenter: parent.verticalCenter
                             text: root.title
                             color: theme.primaryText
-                            font.pixelSize: 12
-                            font.weight: Font.DemiBold
+                            font.pixelSize: 14
+                            font.weight: Font.Normal
+                            font.family: soraFont.name
                             elide: Text.ElideRight
                         }
 

@@ -14,13 +14,14 @@ Item {
     property real animationSpeed: 1.0
     property real phase: 0.0
 
-    /*
-     * The proportions intentionally follow the supplied drawing:
-     * a tall narrow body, high triangular ears, large separated feet,
-     * high-set dot eyes, and a diagonal rounded tail.
-     */
-    implicitWidth: 58
-    implicitHeight: 76
+    // Change only this value to resize the complete cat proportionally.
+    property real sizeScale: 0.78
+
+    readonly property real designWidth: 58
+    readonly property real designHeight: 76
+
+    implicitWidth: designWidth * sizeScale
+    implicitHeight: designHeight * sizeScale
     width: implicitWidth
     height: implicitHeight
 
@@ -35,13 +36,14 @@ Item {
     Item {
         id: pose
 
-        anchors.fill: parent
-        y: 1 - Math.round(Math.abs(Math.sin(root.phase)) * 1.4)
+        width: root.designWidth
+        height: root.designHeight
+        scale: root.sizeScale
+        transformOrigin: Item.TopLeft
 
-        /*
-         * The tail is behind the body. Its right edge overlaps the body so no
-         * seam appears while it swings.
-         */
+        y: (1 - Math.round(Math.abs(Math.sin(root.phase)) * 1.4))
+           * root.sizeScale
+
         Rectangle {
             id: tail
 
@@ -56,10 +58,6 @@ Item {
             antialiasing: true
         }
 
-        /*
-         * The feet retain the previous alternating walk. They are deliberately
-         * broad and rounded to match the supplied silhouette.
-         */
         Rectangle {
             id: rearFoot
 
@@ -86,13 +84,6 @@ Item {
             antialiasing: true
         }
 
-        /*
-         * One continuous fill path reproduces the hand-drawn silhouette:
-         * - ears and body are a single shape;
-         * - the ear valley is broad and horizontal;
-         * - the shoulders round into long parallel sides;
-         * - there is no outline.
-         */
         Shape {
             id: bodyShape
 
@@ -178,10 +169,6 @@ Item {
             }
         }
 
-        /*
-         * The eyes follow the drawing rather than the earlier compact icon:
-         * they sit high on the face, are larger, and have a wide horizontal gap.
-         */
         Rectangle {
             x: 24
             y: 23
