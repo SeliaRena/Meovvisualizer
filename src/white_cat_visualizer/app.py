@@ -26,9 +26,9 @@ from white_cat_visualizer.settings import (
 
 QML_PATH = Path(__file__).parent / "ui" / "qml" / "Main.qml"
 ICON_PATH = Path(__file__).parent / "ui" / "icon.svg"
-APPLICATION_NAME = "White Cat Visualizer"
+APPLICATION_NAME = "Meovvisualizer"
 APPLICATION_VERSION = "0.1.0"
-ORGANIZATION_NAME = "White Cat Visualizer"
+ORGANIZATION_NAME = "Meovvisualizer"
 
 
 def create_controller(settings: ApplicationSettings | None = None) -> VisualizerController:

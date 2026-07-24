@@ -3,7 +3,7 @@ requires = ["hatchling>=1.25"]
 build-backend = "hatchling.build"
 
 [project]
-name = "white-cat-visualizer"
+name = "Meovvisualizer"
 version = "0.1.0"
 description = "Minimal Windows system-audio visualizer with animated white cats"
 readme = "README.md"
@@ -13,7 +13,7 @@ dependencies = [
 ]
 
 [project.scripts]
-white-cat-visualizer = "white_cat_visualizer.app:main"
+meovvisualizer = "white_cat_visualizer.app:main"
 
 [project.optional-dependencies]
 dev = [
