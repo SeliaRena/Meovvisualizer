@@ -1,0 +1,42 @@
+Long Bar Cat Personal and Fan Use License
+
+Copyright © 2026 Selia Rena. All rights reserved.
+
+This license applies to the official Long Bar Cat character and all source files, artwork, animations, and other materials marked with:
+
+SPDX-License-Identifier: LicenseRef-Long-Bar-Cat
+
+These materials are not covered by any open-source license that may apply to the rest of Meovvisualizer.
+
+## Permitted Use
+
+You may:
+
+* download, install, and use Meovvisualizer for personal, non-commercial purposes;
+* share non-commercial screenshots, recordings, reviews, demonstrations, and social media posts featuring Meovvisualizer or Long Bar Cat; and
+* create and share non-commercial fan art or other unofficial derivative works based on Long Bar Cat.
+
+Fan works and other derivative creations must reasonably credit the original character, for example:
+
+“Long Bar Cat was originally created by Selia Rena for Meovvisualizer.”
+
+Attribution is not required for ordinary screenshots, recordings, reviews, or posts showing Meovvisualizer in use.
+
+## Restrictions
+
+You may not:
+
+* claim or imply that you created or own the original Long Bar Cat character;
+* present an unofficial derivative as an official version of Long Bar Cat;
+* remove copyright, authorship, or license notices;
+* redistribute the official Long Bar Cat source files or assets as a standalone download, asset pack, or part of another distributed project;
+* include Long Bar Cat or a substantially derived version in another publicly distributed application, game, desktop widget, product, or project; or
+* use Long Bar Cat or a substantially derived version for any direct or indirect commercial purpose without prior written permission.
+
+Commercial use includes paid products, applications, games, monetized content, advertising, sponsorships, crowdfunding, merchandise, commissions, subscriptions, and use as a commercial logo, mascot, brand, or promotional character.
+
+Creators of permitted fan works retain rights only in their own original contributions. Ownership of the original Long Bar Cat character remains with Selia Rena.
+
+This license does not restrict independently created long-shaped, rectangular, minimalist, or otherwise similar cat designs that do not copy the official Long Bar Cat character.
+
+All rights not expressly granted are reserved.

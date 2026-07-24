@@ -11,6 +11,11 @@ requires-python = ">=3.11"
 dependencies = [
   "numpy>=1.26",
 ]
+license = "Apache 2.0 AND LicenseRef-Long-Bar-Cat"
+license-files = [
+  "LICENSE",
+  "LICENSES/LicenseRef-Long-Bar-Cat.txt"
+]
 
 [project.scripts]
 meovvisualizer = "white_cat_visualizer.app:main"

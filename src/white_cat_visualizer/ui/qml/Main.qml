@@ -4,6 +4,7 @@ import QtQuick
 import QtQuick.Controls.Basic
 import QtQuick.Layouts
 import "components" as Components
+import "long_bar_cat" as LongBarCat
 
 ApplicationWindow {
     id: root
@@ -902,7 +903,7 @@ ApplicationWindow {
                         objectName: "longCatBars"
                         model: 24
 
-                        Components.LongCatBar {
+                        LongBarCat.LongCatBar {
                             width: (longCatVisualizer.width - 23 * longCatVisualizer.spacing) / 24
                             height: parent.height
                             bandValue: root.controller.bands[index]

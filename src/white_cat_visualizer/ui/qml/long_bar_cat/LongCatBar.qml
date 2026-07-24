@@ -1,3 +1,9 @@
+// SPDX-FileCopyrightText: 2026 selia rena
+// SPDX-License-Identifier: LicenseRef-Long-Bar-Cat
+//
+// Part of the official Long Bar Cat character implementation.
+// See LICENSES/LicenseRef-Long-Bar-Cat.txt.
+
 import QtQuick
 import QtQuick.Shapes
 

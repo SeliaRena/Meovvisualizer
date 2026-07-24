@@ -2,6 +2,7 @@ pragma ComponentBehavior: Bound
 
 import QtQuick
 import QtQuick.Controls.Basic
+import "../long_bar_cat" as LongBarCat
 
 Item {
     id: root
@@ -99,7 +100,7 @@ Item {
             }
         }
 
-        SimpleWalkingCat {
+        LongBarCat.SimpleWalkingCat {
             id: walkingCat
 
             x: root.trailLength
