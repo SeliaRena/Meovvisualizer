@@ -89,7 +89,7 @@ Item {
 
             Label {
                 text: root.expanded ? "\u2303" : "\u2304"
-                color: toggleButton.activeFocus
+                color: toggleButton.visualFocus
                        ? root.theme.accent
                        : root.theme.secondaryText
                 font.pixelSize: 14
@@ -102,10 +102,10 @@ Item {
             color: toggleButton.down ? root.theme.pressedOverlay
                                      : toggleButton.hovered ? root.theme.hoverOverlay
                                                             : "transparent"
-            border.color: toggleButton.activeFocus
+            border.color: toggleButton.visualFocus
                           ? root.theme.accent
                           : "transparent"
-            border.width: toggleButton.activeFocus ? 1 : 0
+            border.width: toggleButton.visualFocus ? 1 : 0
             radius: root.theme.controlRadius
 
             Behavior on color {

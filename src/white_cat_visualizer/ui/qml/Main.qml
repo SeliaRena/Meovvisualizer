@@ -114,7 +114,7 @@ ApplicationWindow {
             root.x = settingsManager.windowX
             root.y = settingsManager.windowY
         }
-        sourceControl.forceActiveFocus(Qt.TabFocusReason)
+        sourceControl.forceActiveFocus(Qt.OtherFocusReason)
     }
     onClosing: settingsManager.saveWindow(root.x, root.y, root.width, root.height)
 
@@ -150,6 +150,21 @@ ApplicationWindow {
         border.color: theme.strongBorder
         border.width: root.maximized ? 0 : 1
         radius: root.effectivePanelRadius
+
+        // Sits behind all interactive content. It only receives presses that
+        // were not handled by a control or title-bar pointer handler.
+        Item {
+            id: backgroundFocusSink
+
+            anchors.fill: parent
+            activeFocusOnTab: false
+
+            MouseArea {
+                anchors.fill: parent
+                acceptedButtons: Qt.LeftButton
+                onPressed: backgroundFocusSink.forceActiveFocus(Qt.MouseFocusReason)
+            }
+        }
 
         ColumnLayout {
             id: mainLayout
@@ -396,10 +411,10 @@ ApplicationWindow {
                                                                   : sourceControl.down ? theme.pressedOverlay
                                                                                        : sourceControl.hovered ? theme.hoverOverlay
                                                                                                                : theme.elevatedOverlay
-                                    border.color: sourceControl.activeFocus ? theme.accent
+                                    border.color: sourceControl.visualFocus ? theme.accent
                                                                             : sourceControl.hovered ? theme.standardBorder
                                                                                                     : theme.subtleBorder
-                                    border.width: sourceControl.activeFocus ? 2 : 1
+                                    border.width: sourceControl.visualFocus ? 2 : 1
                                     radius: theme.controlRadius
 
                                     Behavior on color {
@@ -495,10 +510,10 @@ ApplicationWindow {
                                                                 : modeControl.down ? theme.pressedOverlay
                                                                                    : modeControl.hovered ? theme.hoverOverlay
                                                                                                          : theme.elevatedOverlay
-                                    border.color: modeControl.activeFocus ? theme.accent
+                                    border.color: modeControl.visualFocus ? theme.accent
                                                                           : modeControl.hovered ? theme.standardBorder
                                                                                                 : theme.subtleBorder
-                                    border.width: modeControl.activeFocus ? 2 : 1
+                                    border.width: modeControl.visualFocus ? 2 : 1
                                     radius: theme.controlRadius
 
                                     Behavior on color {
@@ -599,9 +614,9 @@ ApplicationWindow {
                                     implicitWidth: sensitivityControl.hovered ? 16 : 14
                                     implicitHeight: implicitWidth
                                     color: sensitivityControl.enabled ? theme.primaryText : theme.disabledText
-                                    border.color: sensitivityControl.activeFocus ? theme.accent
+                                    border.color: sensitivityControl.visualFocus ? theme.accent
                                                                                  : theme.standardBorder
-                                    border.width: sensitivityControl.activeFocus ? 2 : 1
+                                    border.width: sensitivityControl.visualFocus ? 2 : 1
                                     radius: width / 2
 
                                     Behavior on implicitWidth {
@@ -734,6 +749,8 @@ ApplicationWindow {
                                 Layout.preferredHeight: 40
                                 text: root.controller.running ? qsTr("Stop") : qsTr("Start")
                                 activeFocusOnTab: true
+                                readonly property bool showAccentBorder:
+                                    visualFocus || root.controller.running
                                 Accessible.name: text
                                 Accessible.description: qsTr("Start or stop audio visualization")
                                 KeyNavigation.tab: sourceControl
@@ -755,9 +772,9 @@ ApplicationWindow {
                                                                    : runningControl.down ? theme.secondaryText
                                                                                          : runningControl.hovered ? theme.primaryText
                                                                                                                   : theme.primaryControl
-                                    border.color: runningControl.activeFocus ? theme.accent
-                                                                            : theme.standardBorder
-                                    border.width: runningControl.activeFocus ? 2 : 1
+                                    border.color: runningControl.showAccentBorder ? theme.accent
+                                                                              : theme.standardBorder
+                                    border.width: runningControl.showAccentBorder ? 2 : 1
                                     radius: theme.controlRadius
                                     scale: runningControl.down ? 0.98 : 1.0
 
