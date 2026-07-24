@@ -43,7 +43,7 @@ class VisualizerController(QObject):
     debugOverlayEnabledChanged = Signal()
     _runtimeUpdateAvailable = Signal()
 
-    _MODE_NAMES = ("Reference bars", "Long cats", "Bouncing cats")
+    _MODE_NAMES = ("Reference bars", "Long cats")
     _BAND_COUNT = 24
 
     def __init__(

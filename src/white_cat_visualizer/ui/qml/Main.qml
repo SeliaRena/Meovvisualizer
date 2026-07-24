@@ -914,30 +914,6 @@ ApplicationWindow {
                     }
                 }
 
-                Row {
-                    id: bouncingCatVisualizer
-
-                    objectName: "bouncingCatVisualizer"
-                    anchors.fill: visualizerViewport
-                    spacing: Math.max(2, Math.min(6, width / 140))
-                    visible: root.controller.mode === "Bouncing cats"
-
-                    Repeater {
-                        objectName: "bouncingCatHeads"
-                        model: 24
-
-                        Components.BouncingCatHead {
-                            width: (bouncingCatVisualizer.width
-                                    - 23 * bouncingCatVisualizer.spacing) / 24
-                            height: parent.height
-                            bandValue: root.controller.bands[index]
-                            peakValue: root.controller.peak
-                            fillColor: theme.catFill
-                            detailColor: theme.catDetail
-                        }
-                    }
-                }
-
                 Label {
                     anchors.centerIn: parent
                     visible: !root.controller.running
