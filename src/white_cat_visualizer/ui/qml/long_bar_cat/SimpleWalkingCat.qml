@@ -1,4 +1,4 @@
-// SPDX-FileCopyrightText: 2026 selia rena
+// SPDX-FileCopyrightText: 2026 Selia Rena
 // SPDX-License-Identifier: LicenseRef-Long-Bar-Cat
 //
 // Part of the official Long Bar Cat character implementation.
