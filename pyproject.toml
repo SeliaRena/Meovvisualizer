@@ -11,7 +11,7 @@ requires-python = ">=3.11"
 dependencies = [
   "numpy>=1.26",
 ]
-license = "Apache 2.0 AND LicenseRef-Long-Bar-Cat"
+license = "Apache-2.0 AND LicenseRef-Long-Bar-Cat"
 license-files = [
   "LICENSE",
   "LICENSES/LicenseRef-Long-Bar-Cat.txt"
@@ -58,3 +58,16 @@ include = ["src", "tests", "scripts"]
 pythonVersion = "3.11"
 typeCheckingMode = "strict"
 reportMissingTypeStubs = "warning"
+
+[tool.pyside6-project]
+files = [
+  "deploy_main.py",
+  "src/white_cat_visualizer/app.py",
+  "src/white_cat_visualizer/ui/qml/Main.qml",
+  "src/white_cat_visualizer/ui/qml/components/ExpandableControlsPanel.qml",
+  "src/white_cat_visualizer/ui/qml/components/SpectrumBar.qml",
+  "src/white_cat_visualizer/ui/qml/components/VibingMarquee.qml",
+  "src/white_cat_visualizer/ui/qml/components/VisualTokens.qml",
+  "src/white_cat_visualizer/ui/qml/long_bar_cat/LongCatBar.qml",
+  "src/white_cat_visualizer/ui/qml/long_bar_cat/SimpleWalkingCat.qml"
+]

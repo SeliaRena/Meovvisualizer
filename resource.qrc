@@ -1,0 +1,14 @@
+<RCC>
+    <qresource prefix="/qml">
+        <file alias="Main.qml">src/white_cat_visualizer/ui/qml/Main.qml</file>
+        <file alias="components/ExpandableControlsPanel.qml">src/white_cat_visualizer/ui/qml/components/ExpandableControlsPanel.qml</file>
+        <file alias="components/SpectrumBar.qml">src/white_cat_visualizer/ui/qml/components/SpectrumBar.qml</file>
+        <file alias="components/VibingMarquee.qml">src/white_cat_visualizer/ui/qml/components/VibingMarquee.qml</file>
+        <file alias="components/VisualTokens.qml">src/white_cat_visualizer/ui/qml/components/VisualTokens.qml</file>
+        <file alias="long_bar_cat/LongCatBar.qml">src/white_cat_visualizer/ui/qml/long_bar_cat/LongCatBar.qml</file>
+        <file alias="long_bar_cat/SimpleWalkingCat.qml">src/white_cat_visualizer/ui/qml/long_bar_cat/SimpleWalkingCat.qml</file>
+        <file alias="long_bar_cat/long_bar_cat_icon.png">src/white_cat_visualizer/ui/qml/long_bar_cat/long_bar_cat_icon.png</file>
+        <file alias="long_bar_cat/long_bar_cat_windows.ico">src/white_cat_visualizer/ui/qml/long_bar_cat/long_bar_cat_windows.ico</file>
+        <file alias="Sora-Regular.ttf">src/white_cat_visualizer/ui/Sora-Regular.ttf</file>
+    </qresource>
+</RCC>

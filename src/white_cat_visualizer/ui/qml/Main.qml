@@ -25,7 +25,7 @@ ApplicationWindow {
     FontLoader {
         id: soraFont
 
-        source: "../Sora-Regular.ttf"
+        source: "qrc:///qml/Sora-Regular.ttf"
     }
 
     visible: true

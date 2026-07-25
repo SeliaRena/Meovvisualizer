@@ -24,6 +24,8 @@ from white_cat_visualizer.settings import (
     default_settings_path,
 )
 
+import resource_rc # noqa: F401
+
 QML_PATH = Path(__file__).parent / "ui" / "qml" / "Main.qml"
 ICON_PATH = Path(__file__).parent / "ui" / "qml" / "long_bar_cat" / "long_bar_cat_icon.png"
 APPLICATION_NAME = "Meovvisualizer"
@@ -82,7 +84,7 @@ def create_engine(
     if settings_manager is None:
         settings_manager = SettingsManager(parent=engine)
     engine.setInitialProperties({"controller": controller, "settingsManager": settings_manager})
-    engine.load(QUrl.fromLocalFile(str(QML_PATH)))
+    engine.load(QUrl("qrc:/qml/Main.qml"))
     return engine
 
 
@@ -96,8 +98,7 @@ def main(arguments: Sequence[str] | None = None) -> int:
     application.setApplicationName(APPLICATION_NAME)
     application.setApplicationVersion(APPLICATION_VERSION)
     application.setOrganizationName(ORGANIZATION_NAME)
-    if ICON_PATH.exists():
-        application.setWindowIcon(QIcon(str(ICON_PATH)))
+    application.setWindowIcon(QIcon(":/qml/long_bar_cat/long_bar_cat_icon.png"))
 
     settings_manager = SettingsManager(JsonSettingsStore(default_settings_path()))
     controller = create_controller(settings_manager.settings)
