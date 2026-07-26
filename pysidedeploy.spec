@@ -68,7 +68,7 @@ macos.permissions =
 mode = standalone
 
 # specify any extra nuitka arguments
-extra_args = --quiet --noinclude-qt-translations --output-filename=Meovvisualizer.exe
+extra_args = --quiet --noinclude-qt-translations --output-filename=Meovvisualizer.exe --windows-console-mode=disable
 
 [buildozer]
 
