@@ -1,55 +1,35 @@
-# White Cat Visualizer
+# Meovvisualizer
 
-A small Windows desktop music visualizer built with Python 3.11, PySide6/QML, NumPy, and WASAPI loopback. It renders a reference spectrum plus two white-cat visualizers in a compact dark interface. Deterministic synthetic sources are always included, so the application remains usable without audio hardware or the Windows capture dependency.
+### A CAT-driven simple Windows desktop audio visualizer built with Python 3.11, PySide6/QML, NumPy, and WASAPI loopback.
+### !! The cats react to the sound you're playing !!
 
-## Run from source on Windows
+I built this purely for fun. I originally just wanted a project to practice working with AI & make my desktop feel more lively, and this idea just came out of nowhere.
 
-In PowerShell from the repository root:
+But I ended up liking it quite a bit, so I decided to publish it.
 
-```powershell
-py -3.11 -m venv .venv
-.\.venv\Scripts\Activate.ps1
-python -m pip install --upgrade pip
-python -m pip install -e ".[gui,windows-audio]"
-white-cat-visualizer
-```
+Deterministic synthetic sources are always included, so the application remains usable without audio hardware or the Windows capture dependency.
+
+## Installation
+
+### Windows (Currently Windows Only)
+
+1. Download the latest Windows x64 ZIP archive from the [Releases page](https://github.com/SeliaRena/Meovvisualizer/releases/latest).
+2. Extract the entire archive.
+3. Run `Meovvisualizer.exe`.
+
+> Keep all extracted files together. `Meovvisualizer.exe` depends on the runtime files bundled in the release folder.
+
+No installation, Python environment, or additional dependencies are required.
+
+The executable is currently unsigned, so Windows SmartScreen may display a warning on first launch.
+
+## Usage
 
 Choose an audio source and visualizer, adjust sensitivity, then select **Start**. The source, visualizer, sensitivity, window size, and window position are restored on the next launch. Settings are stored in `%LOCALAPPDATA%\WhiteCatVisualizer\settings.json`.
 
 All controls support keyboard focus and activation. Use Tab and Shift+Tab to move between controls, arrow keys to change combo boxes and sensitivity, and Space or Enter to activate the focused control. F12 toggles the diagnostic overlay; it is always off at startup.
 
 If Windows audio capture is unavailable, the application reports the backend problem and keeps all synthetic sources available. A missing saved audio device, unreadable settings file, or invalid settings value produces a runtime warning and falls back to a safe default rather than preventing startup.
-
-## Verify a development checkout
-
-```powershell
-python -m pip install -e ".[dev,gui,windows-audio]"
-python scripts/verify.py
-python scripts/benchmark_analysis.py
-```
-
-The verification command runs formatting, linting, strict type checks, unit and GUI tests, core and GUI smoke tests, and QML linting when Qt's `qmllint` executable is available.
-
-## Build the Windows release folder
-
-Create a clean release environment and run the documented build script:
-
-```powershell
-py -3.11 -m venv .venv-release
-.\.venv-release\Scripts\Activate.ps1
-python -m pip install --upgrade pip
-python -m pip install -e ".[release]"
-.\scripts\build_windows.ps1
-.\dist\WhiteCatVisualizer\WhiteCatVisualizer.exe
-```
-
-The default build includes the runtime SVG icon and QML files. To apply a Windows executable icon, supply a project-specific `.ico` file through the build hook:
-
-```powershell
-.\scripts\build_windows.ps1 -IconPath .\branding\white-cat.ico
-```
-
-The output is an unsigned PyInstaller one-folder application, not an installer. Test the generated executable on the minimum Windows version you intend to support before distribution.
 
 ## Known limitations
 
