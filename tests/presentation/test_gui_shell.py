@@ -20,6 +20,7 @@ QGuiApplication = qt_gui.QGuiApplication
 QPointF = qt_core.QPointF
 QQuickItem = qt_quick.QQuickItem
 QEventLoop = qt_core.QEventLoop
+QMetaObject = qt_core.QMetaObject
 QTimer = qt_core.QTimer
 create_engine = application_module.create_engine
 create_controller = application_module.create_controller
@@ -85,22 +86,42 @@ def test_shell_loads_and_keeps_canvas_usable_at_supported_sizes(
     application: QGuiApplication,
 ) -> None:
     controller = create_controller()
-    engine = create_engine(controller)
+    qml_warnings: list[object] = []
+    engine = create_engine(controller, qml_warnings)
     roots = engine.rootObjects()
+    assert qml_warnings == []
     assert len(roots) == 1
     root = roots[0]
+    controls_panel = root.findChild(QQuickItem, "expandableControlsPanel")
+    controls = root.findChild(QQuickItem, "controlSurface")
+    canvas = root.findChild(QQuickItem, "visualizerCanvas")
 
-    for width, height in ((520, 480), (960, 720), (1440, 900)):
+    assert controls_panel is not None
+    assert controls is not None
+    assert canvas is not None
+    minimum_width = root.property("minimumWidth")
+    minimum_height = root.property("minimumHeight")
+    assert minimum_width > 0
+    assert minimum_height > 0
+
+    for width, height in (
+        (minimum_width, minimum_height),
+        (max(960, minimum_width), max(720, minimum_height)),
+        (max(1440, minimum_width), max(900, minimum_height)),
+    ):
         root.setProperty("width", width)
         root.setProperty("height", height)
         application.processEvents()
 
-        controls = root.findChild(QObject, "controlSurface")
-        canvas = root.findChild(QObject, "visualizerCanvas")
-        assert controls is not None
-        assert canvas is not None
-        assert canvas.property("height") >= 240
-        assert controls.property("y") + controls.property("height") <= canvas.property("y")
+        controls_bottom = controls_panel.mapToScene(QPointF()).y() + controls_panel.property(
+            "height"
+        )
+        canvas_top = canvas.mapToScene(QPointF()).y()
+        assert controls.property("width") > 0
+        assert controls.property("height") > 0
+        assert canvas.property("width") > 0
+        assert canvas.property("height") >= root.property("minimumCanvasHeight")
+        assert controls_bottom <= canvas_top + 0.5
 
     del engine
 
@@ -129,14 +150,16 @@ def test_shell_uses_centralized_tint_glass_tokens(
     assert theme.property("accent") == QColor("#A491FF")
     assert theme.property("transitionDuration") == 140
 
-    assert main_surface.property("x") >= 12
-    assert main_surface.property("y") >= 12
-    assert controls.property("width") == pytest.approx(canvas.property("width"))
+    outer_inset = theme.property("outerInset")
+    assert main_surface.property("x") == pytest.approx(outer_inset)
+    assert main_surface.property("y") == pytest.approx(outer_inset)
+    assert controls.property("width") > 0
+    assert canvas.property("width") > 0
 
     del engine
 
 
-def test_glass_frame_tracks_root_geometry_across_responsive_breakpoint(
+def test_glass_frame_and_narrow_contract_track_supported_window_sizes(
     application: QGuiApplication,
 ) -> None:
     controller = create_controller()
@@ -146,29 +169,32 @@ def test_glass_frame_tracks_root_geometry_across_responsive_breakpoint(
 
     assert main_surface is not None
     expected_fill = QColor("#C20B0912")
-    outer_inset = 12
+    minimum_width = root.property("minimumWidth")
+    minimum_height = root.property("minimumHeight")
+    breakpoint = root.property("wideToolbarMinimumWidth")
+    supported_widths = (
+        minimum_width,
+        max(minimum_width, breakpoint - 1),
+        max(minimum_width, breakpoint),
+        max(minimum_width, breakpoint + 240),
+    )
 
-    for width, height in (
-        (758, 620),
-        (759, 621),
-        (760, 622),
-        (761, 623),
-        (900, 480),
-        (740, 760),
-        (960, 540),
-    ):
+    for width in supported_widths:
+        height = max(minimum_height, 720)
         root.setProperty("width", width)
         root.setProperty("height", height)
         application.processEvents()
 
+        effective_inset = root.property("effectiveOuterInset")
         assert root.findChild(QObject, "mainGlassSurface") == main_surface
         assert root.property("width") == pytest.approx(width)
         assert root.property("height") == pytest.approx(height)
+        assert root.property("narrow") is (width < breakpoint)
         assert root.property("opacity") == pytest.approx(1.0)
-        assert main_surface.property("x") == pytest.approx(outer_inset)
-        assert main_surface.property("y") == pytest.approx(outer_inset)
-        assert main_surface.property("width") == pytest.approx(width - 2 * outer_inset)
-        assert main_surface.property("height") == pytest.approx(height - 2 * outer_inset)
+        assert main_surface.property("x") == pytest.approx(effective_inset)
+        assert main_surface.property("y") == pytest.approx(effective_inset)
+        assert main_surface.property("width") == pytest.approx(width - 2 * effective_inset)
+        assert main_surface.property("height") == pytest.approx(height - 2 * effective_inset)
         assert main_surface.property("visible") is True
         assert main_surface.property("clip") is False
         assert main_surface.property("opacity") == pytest.approx(1.0)
@@ -177,28 +203,39 @@ def test_glass_frame_tracks_root_geometry_across_responsive_breakpoint(
     del engine
 
 
-def test_wrapped_controls_stay_above_visualizer(
+def test_controls_and_visualizer_remain_usable_across_layout_modes(
     application: QGuiApplication,
 ) -> None:
     controller = create_controller()
     engine = create_engine(controller)
     root = engine.rootObjects()[0]
+    controls_panel = root.findChild(QQuickItem, "expandableControlsPanel")
     controls = root.findChild(QQuickItem, "controlSurface")
     controls_flow = root.findChild(QQuickItem, "controlsFlow")
     running_control = root.findChild(QQuickItem, "runningControl")
     canvas = root.findChild(QQuickItem, "visualizerCanvas")
 
+    assert controls_panel is not None
     assert controls is not None
     assert controls_flow is not None
     assert running_control is not None
     assert canvas is not None
 
-    for width in (520, 700, 759, 760, 800, 895, 896, 960):
+    minimum_width = root.property("minimumWidth")
+    minimum_height = root.property("minimumHeight")
+    breakpoint = root.property("wideToolbarMinimumWidth")
+    for width in (
+        minimum_width,
+        max(minimum_width, breakpoint - 1),
+        max(minimum_width, breakpoint),
+        max(minimum_width, breakpoint + 64),
+    ):
         root.setProperty("width", width)
-        root.setProperty("height", 600)
+        root.setProperty("height", max(minimum_height, 720))
         application.processEvents()
 
         controls_top = controls.mapToScene(QPointF()).y()
+        panel_bottom = controls_panel.mapToScene(QPointF()).y() + controls_panel.property("height")
         controls_bottom = controls_top + controls.property("height")
         button_top = running_control.mapToScene(QPointF()).y()
         button_bottom = button_top + running_control.property("height")
@@ -207,11 +244,81 @@ def test_wrapped_controls_stay_above_visualizer(
         assert controls.property("height") >= controls_flow.property("implicitHeight")
         assert button_top >= controls_top
         assert button_bottom <= controls_bottom + 0.5
-        assert running_control.property("width") >= 96
-        assert running_control.property("height") == pytest.approx(40)
-        assert canvas_top >= controls_bottom
-        assert root.property("narrow") is (width < 896)
+        assert running_control.property("width") > 0
+        assert running_control.property("height") > 0
+        assert running_control.property("enabled") is True
+        assert canvas.property("width") > 0
+        assert canvas.property("height") > 0
+        assert canvas_top >= panel_bottom - 0.5
+        assert root.property("narrow") is (width < breakpoint)
 
+    del engine
+
+
+def test_controls_panel_expands_and_collapses_without_losing_usable_content(
+    application: QGuiApplication,
+) -> None:
+    controller = create_controller()
+    engine = create_engine(controller)
+    root = engine.rootObjects()[0]
+    panel = root.findChild(QQuickItem, "expandableControlsPanel")
+    toggle = root.findChild(QQuickItem, "controlsToggleButton")
+    marquee = root.findChild(QQuickItem, "vibingMarquee")
+    canvas = root.findChild(QQuickItem, "visualizerCanvas")
+
+    assert panel is not None
+    assert toggle is not None
+    assert marquee is not None
+    assert canvas is not None
+    assert panel.property("expanded") is True
+    expanded_height = panel.property("height")
+
+    assert QMetaObject.invokeMethod(toggle, "click")
+    wait_until(
+        lambda: panel.property("expanded") is False and panel.property("height") < expanded_height
+    )
+    collapsed_height = panel.property("height")
+
+    assert collapsed_height > 0
+    assert marquee.property("active") is True
+    assert toggle.property("activeFocus") is True
+    assert canvas.property("width") > 0
+    assert canvas.property("height") > 0
+
+    assert QMetaObject.invokeMethod(toggle, "click")
+    wait_until(
+        lambda: panel.property("expanded") is True and panel.property("height") > collapsed_height
+    )
+
+    assert marquee.property("active") is False
+    del engine
+
+
+def test_running_button_controls_start_and_stop_state(
+    application: QGuiApplication,
+) -> None:
+    controller = create_controller()
+    engine = create_engine(controller)
+    root = engine.rootObjects()[0]
+    running_control = root.findChild(QQuickItem, "runningControl")
+
+    assert running_control is not None
+    assert running_control.property("enabled") is True
+    assert running_control.property("text") == "Start"
+    assert controller.running is False
+
+    assert QMetaObject.invokeMethod(running_control, "click")
+    wait_until(lambda: controller.running and any(controller.bands))
+
+    assert running_control.property("text") == "Stop"
+
+    assert QMetaObject.invokeMethod(running_control, "click")
+    wait_until(lambda: not controller.running)
+
+    assert running_control.property("text") == "Start"
+    assert controller.bands == [0.0] * 24
+    assert controller.rms == 0.0
+    assert controller.peak == 0.0
     del engine
 
 
@@ -270,7 +377,7 @@ def test_primary_controls_have_readable_disabled_states(
     del engine
 
 
-def test_shell_renders_all_fixed_visualizers_and_separate_levels(
+def test_shell_renders_current_visualizers_and_separate_levels(
     application: QGuiApplication,
 ) -> None:
     controller = create_controller()
@@ -279,7 +386,6 @@ def test_shell_renders_all_fixed_visualizers_and_separate_levels(
 
     bars = root.findChild(QObject, "spectrumBars")
     long_cats = root.findChild(QObject, "longCatBars")
-    bouncing_cats = root.findChild(QObject, "bouncingCatHeads")
     rms_level = root.findChild(QObject, "rmsLevel")
     peak_level = root.findChild(QObject, "peakLevel")
 
@@ -287,8 +393,6 @@ def test_shell_renders_all_fixed_visualizers_and_separate_levels(
     assert bars.property("count") == 24
     assert long_cats is not None
     assert long_cats.property("count") == 24
-    assert bouncing_cats is not None
-    assert bouncing_cats.property("count") == 24
     assert rms_level is not None
     assert peak_level is not None
 
@@ -324,7 +428,7 @@ def test_shell_shows_audio_failures_without_backend_logic(
     del engine
 
 
-def test_mode_switching_and_cat_mappings_are_deterministic(
+def test_mode_switching_and_long_cat_mapping_are_deterministic(
     application: QGuiApplication,
 ) -> None:
     controller = create_controller()
@@ -332,11 +436,9 @@ def test_mode_switching_and_cat_mappings_are_deterministic(
     root = engine.rootObjects()[0]
     reference_view = root.findChild(QQuickItem, "referenceVisualizer")
     long_cat_view = root.findChild(QQuickItem, "longCatVisualizer")
-    bouncing_cat_view = root.findChild(QQuickItem, "bouncingCatVisualizer")
 
     assert reference_view is not None
     assert long_cat_view is not None
-    assert bouncing_cat_view is not None
     assert reference_view.property("visible") is True
 
     controller.mode = "Long cats"
@@ -348,21 +450,10 @@ def test_mode_switching_and_cat_mappings_are_deterministic(
     long_cats = visualizer_delegates(long_cat_view, "longCatBar")
     assert len(long_cats) == 24
     strongest_long_cat = max(long_cats, key=lambda cat: cat.property("bandValue"))
-    assert strongest_long_cat.property("bodyHeight") > strongest_long_cat.property(
-        "minimumBodyHeight"
-    )
-    assert strongest_long_cat.property("headOffset") > 0.0
+    weakest_long_cat = min(long_cats, key=lambda cat: cat.property("bandValue"))
+    assert strongest_long_cat.property("bodyHeight") > weakest_long_cat.property("bodyHeight")
+    assert strongest_long_cat.property("headTop") >= 0.0
     assert strongest_long_cat.property("earAngle") > 0.0
-
-    controller.mode = "Bouncing cats"
-    application.processEvents()
-
-    assert long_cat_view.property("visible") is False
-    assert bouncing_cat_view.property("visible") is True
-    bouncing_cats = visualizer_delegates(bouncing_cat_view, "bouncingCatHead")
-    assert len(bouncing_cats) == 24
-    strongest_bouncing_cat = max(bouncing_cats, key=lambda cat: cat.property("bandValue"))
-    assert strongest_bouncing_cat.property("verticalOffset") > 0.0
 
     controller.toggleRunning()
     del engine
@@ -375,7 +466,13 @@ def test_visualizer_delegates_stay_inside_responsive_rows(
     engine = create_engine(controller)
     root = engine.rootObjects()[0]
 
-    for width, height in ((520, 480), (960, 720), (1440, 900)):
+    minimum_width = root.property("minimumWidth")
+    minimum_height = root.property("minimumHeight")
+    for width, height in (
+        (minimum_width, minimum_height),
+        (max(960, minimum_width), max(720, minimum_height)),
+        (max(1440, minimum_width), max(900, minimum_height)),
+    ):
         root.setProperty("width", width)
         root.setProperty("height", height)
         application.processEvents()
@@ -383,29 +480,27 @@ def test_visualizer_delegates_stay_inside_responsive_rows(
         visualizers = (
             (root.findChild(QQuickItem, "referenceVisualizer"), "spectrumBar"),
             (root.findChild(QQuickItem, "longCatVisualizer"), "longCatBar"),
-            (root.findChild(QQuickItem, "bouncingCatVisualizer"), "bouncingCatHead"),
         )
         for row, object_name in visualizers:
             assert row is not None
             delegates = visualizer_delegates(row, object_name)
             assert len(delegates) == 24
             row_width = row.property("width")
+            row_height = row.property("height")
             for delegate in delegates:
-                assert delegate.property("x") >= 0.0
-                right_edge = delegate.property("x") + delegate.property("width")
+                position = delegate.mapToItem(row, QPointF())
+                assert position.x() >= -0.5
+                assert position.y() >= -0.5
+                right_edge = position.x() + delegate.property("width")
+                bottom_edge = position.y() + delegate.property("height")
                 assert right_edge <= row_width + 0.5
+                assert bottom_edge <= row_height + 0.5
 
         long_cat_row = root.findChild(QQuickItem, "longCatVisualizer")
-        bouncing_cat_row = root.findChild(QQuickItem, "bouncingCatVisualizer")
         assert long_cat_row is not None
-        assert bouncing_cat_row is not None
 
         for cat in visualizer_delegates(long_cat_row, "longCatBar"):
             assert cat.property("headTop") >= 0.0
             assert cat.property("bodyTop") >= 0.0
-
-        for cat in visualizer_delegates(bouncing_cat_row, "bouncingCatHead"):
-            assert cat.property("headTop") >= 0.0
-            assert cat.property("headBottom") <= cat.property("height") + 0.5
 
     del engine

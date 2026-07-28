@@ -84,13 +84,13 @@ def test_manager_persists_controller_choices_and_window_geometry(tmp_path: Path)
     controller.setProperty(
         "source", SyntheticAudioSource(SyntheticMode.FREQUENCY_SWEEP).display_name
     )
-    controller.setProperty("mode", "Bouncing cats")
+    controller.setProperty("mode", "Long cats")
     controller.setProperty("sensitivity", 1.4)
     manager.saveWindow(50, 70, 1200, 760)
 
     assert store.load() == ApplicationSettings(
         source_id="synthetic:frequency-sweep",
-        mode="Bouncing cats",
+        mode="Long cats",
         sensitivity=1.4,
         window=WindowSettings(x=50, y=70, width=1200, height=760),
     )

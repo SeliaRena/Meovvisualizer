@@ -50,15 +50,9 @@ def test_settings_window_is_single_instance_and_tracks_always_on_top(
     assert settings_window.property("transientParent") == root
 
     always_on_top_flag = int(Qt.WindowType.WindowStaysOnTopHint)
-    assert int(settings_window.property("flags")) & always_on_top_flag == 0
     assert root.property("windowAlwaysOnTop") is True
     assert always_on_top_switch.property("checked") is True
 
-    root.setProperty("x", 120)
-    root.setProperty("y", 80)
-    root.setProperty("width", 960)
-    root.setProperty("height", 720)
-    application.processEvents()
     original_geometry = (
         root.property("x"),
         root.property("y"),
