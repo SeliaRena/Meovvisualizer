@@ -1,6 +1,7 @@
 <RCC>
     <qresource prefix="/qml">
         <file alias="Main.qml">src/white_cat_visualizer/ui/qml/Main.qml</file>
+        <file alias="SettingsWindow.qml">src/white_cat_visualizer/ui/qml/SettingsWindow.qml</file>
         <file alias="components/ExpandableControlsPanel.qml">src/white_cat_visualizer/ui/qml/components/ExpandableControlsPanel.qml</file>
         <file alias="components/SpectrumBar.qml">src/white_cat_visualizer/ui/qml/components/SpectrumBar.qml</file>
         <file alias="components/VibingMarquee.qml">src/white_cat_visualizer/ui/qml/components/VibingMarquee.qml</file>
