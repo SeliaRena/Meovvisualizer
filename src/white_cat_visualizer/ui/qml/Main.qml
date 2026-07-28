@@ -11,6 +11,7 @@ ApplicationWindow {
 
     required property var controller
     required property var settingsManager
+    property bool windowAlwaysOnTop: true
 
     Components.VisualTokens {
         id: theme
@@ -36,7 +37,7 @@ ApplicationWindow {
     title: qsTr("Meovvisualizer")
     flags: Qt.Window 
          | Qt.FramelessWindowHint
-         | Qt.WindowStaysOnTopHint
+         | (root.windowAlwaysOnTop ? Qt.WindowStaysOnTopHint : 0)
     color: "transparent"
     opacity: 1.0
 
@@ -109,6 +110,10 @@ ApplicationWindow {
     readonly property real controlsHeight: controlSurface.implicitHeight
     readonly property real controlsPanelHeight: controlsPanel.implicitHeight
 
+    function openSettingsWindow() {
+        settingsWindow.present()
+    }
+
     Component.onCompleted: {
         if (settingsManager.hasWindowPosition) {
             root.x = settingsManager.windowX
@@ -116,11 +121,20 @@ ApplicationWindow {
         }
         sourceControl.forceActiveFocus(Qt.OtherFocusReason)
     }
-    onClosing: settingsManager.saveWindow(root.x, root.y, root.width, root.height)
+    onClosing: {
+        settingsWindow.close()
+        settingsManager.saveWindow(root.x, root.y, root.width, root.height)
+    }
 
     Shortcut {
         sequence: "F12"
         onActivated: root.controller.debugOverlayEnabled = !root.controller.debugOverlayEnabled
+    }
+
+    SettingsWindow {
+        id: settingsWindow
+
+        mainWindow: root
     }
 
     Rectangle {
@@ -221,6 +235,37 @@ ApplicationWindow {
                                     root.showNormal()
                                 else
                                     root.showMaximized()
+                            }
+                        }
+                    }
+
+                    Button {
+                        id: settingsButton
+
+                        objectName: "settingsButton"
+                        Layout.preferredWidth: 38
+                        Layout.fillHeight: true
+                        activeFocusOnTab: false
+                        text: "\u2699"
+                        Accessible.name: qsTr("Open settings")
+                        onClicked: root.openSettingsWindow()
+
+                        contentItem: Text {
+                            text: settingsButton.text
+                            color: theme.primaryText
+                            font.family: "Segoe UI Symbol"
+                            font.pixelSize: 16
+                            horizontalAlignment: Text.AlignHCenter
+                            verticalAlignment: Text.AlignVCenter
+                        }
+                        background: Rectangle {
+                            color: settingsButton.down ? theme.pressedOverlay
+                                                       : settingsButton.hovered ? theme.hoverOverlay
+                                                                                : "transparent"
+                            radius: theme.smallRadius
+
+                            Behavior on color {
+                                ColorAnimation { duration: theme.transitionDuration }
                             }
                         }
                     }

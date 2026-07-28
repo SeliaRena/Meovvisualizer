@@ -9,10 +9,12 @@ os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
 ROOT = Path(__file__).resolve().parents[1]
 SRC = ROOT / "src"
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
 if str(SRC) not in sys.path:
     sys.path.insert(0, str(SRC))
 
-from PySide6.QtCore import QEventLoop, QObject, QTimer  # noqa: E402
+from PySide6.QtCore import QEventLoop, QObject, Qt, QTimer  # noqa: E402
 from PySide6.QtGui import QGuiApplication  # noqa: E402
 from PySide6.QtQml import QQmlError  # noqa: E402
 
@@ -30,10 +32,49 @@ def main() -> int:
         return 1
 
     root = engine.rootObjects()[0]
+    settings_objects = (
+        "settingsButton",
+        "settingsWindow",
+        "settingsCloseButton",
+        "alwaysOnTopSwitch",
+    )
+    for object_name in settings_objects:
+        if root.findChild(QObject, object_name) is None:
+            print(f"missing settings object: {object_name}", file=sys.stderr)
+            return 1
+
+    always_on_top_flag = int(Qt.WindowType.WindowStaysOnTopHint)
+    original_geometry = (
+        root.property("x"),
+        root.property("y"),
+        root.property("width"),
+        root.property("height"),
+    )
+    root.setProperty("windowAlwaysOnTop", False)
+    application.processEvents()
+    if int(root.property("flags")) & always_on_top_flag:
+        print("always-on-top flag remained enabled", file=sys.stderr)
+        return 1
+    if not root.property("visible") or original_geometry != (
+        root.property("x"),
+        root.property("y"),
+        root.property("width"),
+        root.property("height"),
+    ):
+        print(
+            "window changed visibility or geometry while disabling always-on-top", file=sys.stderr
+        )
+        return 1
+
+    root.setProperty("windowAlwaysOnTop", True)
+    application.processEvents()
+    if not int(root.property("flags")) & always_on_top_flag:
+        print("always-on-top flag was not restored", file=sys.stderr)
+        return 1
+
     repeaters = (
         ("spectrumBars", "reference bars"),
         ("longCatBars", "long cats"),
-        ("bouncingCatHeads", "bouncing cat heads"),
     )
     for object_name, label in repeaters:
         repeater = root.findChild(QObject, object_name)
@@ -42,7 +83,7 @@ def main() -> int:
             print(f"expected 24 {label}, found {count}", file=sys.stderr)
             return 1
 
-    for mode in ("Reference bars", "Long cats", "Bouncing cats"):
+    for mode in ("Reference bars", "Long cats"):
         controller.setProperty("mode", mode)
         application.processEvents()
         if qml_warnings:

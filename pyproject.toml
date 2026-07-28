@@ -64,6 +64,7 @@ files = [
   "deploy_main.py",
   "src/white_cat_visualizer/app.py",
   "src/white_cat_visualizer/ui/qml/Main.qml",
+  "src/white_cat_visualizer/ui/qml/SettingsWindow.qml",
   "src/white_cat_visualizer/ui/qml/components/ExpandableControlsPanel.qml",
   "src/white_cat_visualizer/ui/qml/components/SpectrumBar.qml",
   "src/white_cat_visualizer/ui/qml/components/VibingMarquee.qml",

@@ -34,7 +34,7 @@ android_packages = buildozer==1.5.0,cython==0.29.33
 # paths to required qml files. comma separated
 # normally all the qml files required by the project are added automatically
 # design studio projects include the qml files using qt resources
-qml_files = src\white_cat_visualizer\ui\qml\Main.qml,src\white_cat_visualizer\ui\qml\components\ExpandableControlsPanel.qml,src\white_cat_visualizer\ui\qml\components\SpectrumBar.qml,src\white_cat_visualizer\ui\qml\components\VibingMarquee.qml,src\white_cat_visualizer\ui\qml\components\VisualTokens.qml,src\white_cat_visualizer\ui\qml\long_bar_cat\LongCatBar.qml,src\white_cat_visualizer\ui\qml\long_bar_cat\SimpleWalkingCat.qml
+qml_files = src\white_cat_visualizer\ui\qml\Main.qml,src\white_cat_visualizer\ui\qml\SettingsWindow.qml,src\white_cat_visualizer\ui\qml\components\ExpandableControlsPanel.qml,src\white_cat_visualizer\ui\qml\components\SpectrumBar.qml,src\white_cat_visualizer\ui\qml\components\VibingMarquee.qml,src\white_cat_visualizer\ui\qml\components\VisualTokens.qml,src\white_cat_visualizer\ui\qml\long_bar_cat\LongCatBar.qml,src\white_cat_visualizer\ui\qml\long_bar_cat\SimpleWalkingCat.qml
 
 # excluded qml plugin binaries
 excluded_qml_plugins = QtCharts,QtQuick3D,QtSensors,QtTest,QtWebEngine
