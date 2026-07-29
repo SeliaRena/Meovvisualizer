@@ -13,11 +13,11 @@ ApplicationWindow {
     objectName: "settingsWindow"
     visible: false
     width: 460
-    height: 246
+    height: 382
     minimumWidth: 460
     maximumWidth: 460
-    minimumHeight: 246
-    maximumHeight: 246
+    minimumHeight: 382
+    maximumHeight: 382
     title: qsTr("Settings")
     flags: Qt.Dialog 
          | Qt.FramelessWindowHint
@@ -289,6 +289,201 @@ ApplicationWindow {
                             }
 
                             background: Item {}
+                        }
+                    }
+                }
+
+                Label {
+                    text: qsTr("ANIMATION")
+                    color: theme.mutedText
+                    font.pixelSize: 10
+                    font.weight: Font.DemiBold
+                    font.letterSpacing: 1.2
+                }
+
+                Rectangle {
+                    objectName: "animationSpeedSetting"
+                    Layout.fillWidth: true
+                    Layout.minimumHeight: 112
+                    Layout.preferredHeight: 112
+                    color: theme.elevatedOverlay
+                    border.color: theme.subtleBorder
+                    border.width: 1
+                    radius: theme.controlRadius
+
+                    ColumnLayout {
+                        anchors.fill: parent
+                        anchors.leftMargin: 14
+                        anchors.rightMargin: 14
+                        anchors.topMargin: 12
+                        anchors.bottomMargin: 12
+                        spacing: 8
+
+                        RowLayout {
+                            Layout.fillWidth: true
+                            spacing: 12
+
+                            ColumnLayout {
+                                Layout.fillWidth: true
+                                spacing: 4
+
+                                Label {
+                                    Layout.fillWidth: true
+                                    text: qsTr("Cat travel speed")
+                                    color: theme.primaryText
+                                    font.pixelSize: 13
+                                    font.weight: Font.DemiBold
+                                }
+
+                                Label {
+                                    Layout.fillWidth: true
+                                    text: qsTr(
+                                        "Control how fast the cat crosses the marquee."
+                                    )
+                                    color: theme.secondaryText
+                                    font.pixelSize: 11
+                                    wrapMode: Text.WordWrap
+                                }
+                            }
+
+                            Label {
+                                objectName: "marqueeSpeedValue"
+                                Layout.alignment: Qt.AlignTop
+                                text: qsTr("%1 px/s").arg(
+                                    Math.round(
+                                        root.mainWindow.marqueePixelsPerSecond
+                                    )
+                                )
+                                color: theme.primaryText
+                                font.pixelSize: 12
+                                font.weight: Font.DemiBold
+                            }
+                        }
+
+                        Slider {
+                            id: marqueeSpeedSlider
+
+                            objectName: "marqueeSpeedSlider"
+                            Layout.fillWidth: true
+                            Layout.minimumHeight: 32
+                            Layout.preferredHeight: 32
+                            from: 50
+                            to: 1000
+                            stepSize: 50
+                            snapMode: Slider.SnapAlways
+                            live: true
+                            value: root.mainWindow.marqueePixelsPerSecond
+                            activeFocusOnTab: true
+                            hoverEnabled: true
+                            readonly property bool snapsAlways:
+                                snapMode === Slider.SnapAlways
+                            Accessible.name: qsTr("Cat travel speed")
+                            Accessible.description: qsTr(
+                                "Controls how fast the cat crosses the marquee "
+                                + "in pixels per second."
+                            )
+
+                            onMoved: {
+                                root.mainWindow.marqueePixelsPerSecond = value
+                            }
+
+                            background: Rectangle {
+                                x: marqueeSpeedSlider.leftPadding
+                                y: marqueeSpeedSlider.topPadding
+                                   + marqueeSpeedSlider.availableHeight / 2
+                                   - height / 2
+                                width: marqueeSpeedSlider.availableWidth
+                                height: 3
+                                color: {
+                                    if (!marqueeSpeedSlider.enabled)
+                                        return theme.elevatedOverlay
+                                    if (marqueeSpeedSlider.pressed)
+                                        return theme.pressedOverlay
+                                    if (marqueeSpeedSlider.hovered)
+                                        return theme.hoverOverlay
+                                    return theme.subtleBorder
+                                }
+                                border.color: marqueeSpeedSlider.visualFocus
+                                              ? theme.accent
+                                              : theme.subtleBorder
+                                border.width:
+                                    marqueeSpeedSlider.visualFocus ? 1 : 0
+                                radius: height / 2
+
+                                Behavior on color {
+                                    ColorAnimation {
+                                        duration: theme.transitionDuration
+                                    }
+                                }
+
+                                Rectangle {
+                                    width:
+                                        marqueeSpeedSlider.visualPosition
+                                        * parent.width
+                                    height: parent.height
+                                    color: {
+                                        if (!marqueeSpeedSlider.enabled)
+                                            return theme.disabledText
+                                        if (marqueeSpeedSlider.pressed)
+                                            return theme.accent
+                                        return theme.softAccent
+                                    }
+                                    radius: parent.radius
+
+                                    Behavior on color {
+                                        ColorAnimation {
+                                            duration: theme.transitionDuration
+                                        }
+                                    }
+                                }
+                            }
+
+                            handle: Rectangle {
+                                x: marqueeSpeedSlider.leftPadding
+                                   + marqueeSpeedSlider.visualPosition
+                                   * (marqueeSpeedSlider.availableWidth - width)
+                                y: marqueeSpeedSlider.topPadding
+                                   + marqueeSpeedSlider.availableHeight / 2
+                                   - height / 2
+                                implicitWidth: {
+                                    if (!marqueeSpeedSlider.enabled)
+                                        return 14
+                                    if (marqueeSpeedSlider.pressed)
+                                        return 13
+                                    if (marqueeSpeedSlider.hovered)
+                                        return 16
+                                    return 14
+                                }
+                                implicitHeight: implicitWidth
+                                color: {
+                                    if (!marqueeSpeedSlider.enabled)
+                                        return theme.disabledText
+                                    if (marqueeSpeedSlider.pressed)
+                                        return theme.secondaryText
+                                    return theme.primaryText
+                                }
+                                border.color: {
+                                    if (marqueeSpeedSlider.visualFocus)
+                                        return theme.accent
+                                    if (marqueeSpeedSlider.hovered)
+                                        return theme.strongBorder
+                                    return theme.standardBorder
+                                }
+                                border.width:
+                                    marqueeSpeedSlider.visualFocus ? 2 : 1
+                                radius: width / 2
+
+                                Behavior on implicitWidth {
+                                    NumberAnimation {
+                                        duration: theme.transitionDuration
+                                    }
+                                }
+                                Behavior on color {
+                                    ColorAnimation {
+                                        duration: theme.transitionDuration
+                                    }
+                                }
+                            }
                         }
                     }
                 }

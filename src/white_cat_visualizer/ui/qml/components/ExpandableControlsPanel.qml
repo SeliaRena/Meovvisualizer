@@ -8,6 +8,7 @@ Item {
     id: root
 
     required property var theme
+    required property real marqueePixelsPerSecond
 
     default property alias contentData: contentHost.data
 
@@ -174,6 +175,7 @@ Item {
             anchors.fill: parent
             active: !root.expanded && collapsedViewport.visible
             text: root.marqueeText
+            pixelsPerSecond: root.marqueePixelsPerSecond
             textColor: root.theme.primaryText
             catColor: "#FFFFFF"
             trailColor: "#FFFFFF"

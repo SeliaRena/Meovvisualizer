@@ -12,6 +12,7 @@ ApplicationWindow {
     required property var controller
     required property var settingsManager
     property bool windowAlwaysOnTop: true
+    property real marqueePixelsPerSecond: 150
 
     Components.VisualTokens {
         id: theme
@@ -380,6 +381,7 @@ ApplicationWindow {
                 expanded: true
                 panelTitle: qsTr("CONTROLS")
                 marqueeText: qsTr("Vibing mode")
+                marqueePixelsPerSecond: root.marqueePixelsPerSecond
 
                 ColumnLayout {
                     id: controlSurface
