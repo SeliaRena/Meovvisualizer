@@ -5,6 +5,7 @@ import warnings
 from collections.abc import Sequence
 from pathlib import Path
 
+import resource_rc  # pyright: ignore[reportUnusedImport]  # noqa: F401
 from PySide6.QtCore import QTimer, QUrl
 from PySide6.QtGui import QGuiApplication, QIcon
 from PySide6.QtQml import QQmlApplicationEngine, QQmlError
@@ -23,8 +24,6 @@ from white_cat_visualizer.settings import (
     SettingsManager,
     default_settings_path,
 )
-
-import resource_rc # noqa: F401
 
 QML_PATH = Path(__file__).parent / "ui" / "qml" / "Main.qml"
 ICON_PATH = Path(__file__).parent / "ui" / "qml" / "long_bar_cat" / "long_bar_cat_icon.png"

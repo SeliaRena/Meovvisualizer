@@ -14,6 +14,44 @@ if TYPE_CHECKING:
     from white_cat_visualizer.presentation.visualizer_controller import VisualizerController
 
 
+DEFAULT_MARQUEE_PIXELS_PER_SECOND = 150
+MINIMUM_MARQUEE_PIXELS_PER_SECOND = 50
+MAXIMUM_MARQUEE_PIXELS_PER_SECOND = 1000
+MARQUEE_PIXELS_PER_SECOND_STEP = 50
+DEFAULT_WINDOW_ALWAYS_ON_TOP = True
+
+
+def _parse_bool_setting(value: object, *, default: bool) -> tuple[bool, bool]:
+    if isinstance(value, bool):
+        return value, True
+    if isinstance(value, str):
+        normalized = value.strip().lower()
+        if normalized == "true":
+            return True, True
+        if normalized == "false":
+            return False, True
+    return default, False
+
+
+def _normalize_marquee_speed(value: object) -> tuple[int, bool]:
+    if isinstance(value, bool) or not isinstance(value, (int, float, str)):
+        return DEFAULT_MARQUEE_PIXELS_PER_SECOND, False
+    try:
+        numeric_value = float(value)
+    except (ValueError, OverflowError):
+        return DEFAULT_MARQUEE_PIXELS_PER_SECOND, False
+    if not math.isfinite(numeric_value):
+        return DEFAULT_MARQUEE_PIXELS_PER_SECOND, False
+
+    clamped_value = min(
+        max(numeric_value, MINIMUM_MARQUEE_PIXELS_PER_SECOND),
+        MAXIMUM_MARQUEE_PIXELS_PER_SECOND,
+    )
+    snapped_steps = math.floor(clamped_value / MARQUEE_PIXELS_PER_SECOND_STEP + 0.5)
+    snapped_value = snapped_steps * MARQUEE_PIXELS_PER_SECOND_STEP
+    return snapped_value, True
+
+
 @dataclass(frozen=True, slots=True)
 class WindowSettings:
     x: int | None = None
@@ -28,6 +66,8 @@ class ApplicationSettings:
     mode: str = "Reference bars"
     sensitivity: float = 1.0
     window: WindowSettings = WindowSettings()
+    window_always_on_top: bool = DEFAULT_WINDOW_ALWAYS_ON_TOP
+    marquee_pixels_per_second: int = DEFAULT_MARQUEE_PIXELS_PER_SECOND
 
 
 class SettingsStore(Protocol):
@@ -95,6 +135,22 @@ class JsonSettingsStore:
             invalid_fields.append("sensitivity")
 
         window = self._load_window(raw.get("window"), invalid_fields)
+        window_always_on_top, valid_always_on_top = _parse_bool_setting(
+            raw.get("window_always_on_top", defaults.window_always_on_top),
+            default=defaults.window_always_on_top,
+        )
+        if not valid_always_on_top:
+            invalid_fields.append("window_always_on_top")
+
+        marquee_pixels_per_second, valid_marquee_speed = _normalize_marquee_speed(
+            raw.get(
+                "marquee_pixels_per_second",
+                defaults.marquee_pixels_per_second,
+            )
+        )
+        if not valid_marquee_speed:
+            invalid_fields.append("marquee_pixels_per_second")
+
         if invalid_fields:
             fields = ", ".join(invalid_fields)
             self._warn(f"invalid settings fields ({fields}); using defaults for those fields")
@@ -103,6 +159,8 @@ class JsonSettingsStore:
             mode=mode,
             sensitivity=sensitivity,
             window=window,
+            window_always_on_top=window_always_on_top,
+            marquee_pixels_per_second=marquee_pixels_per_second,
         )
 
     def save(self, settings: ApplicationSettings) -> bool:
@@ -209,6 +267,14 @@ class SettingsManager(QObject):
     def windowHeight(self) -> int:
         return self._settings.window.height
 
+    @Property(bool, constant=True)
+    def windowAlwaysOnTop(self) -> bool:
+        return self._settings.window_always_on_top
+
+    @Property(int, constant=True)
+    def marqueePixelsPerSecond(self) -> int:
+        return self._settings.marquee_pixels_per_second
+
     def watch_controller(self, controller: VisualizerController) -> None:
         controller.sourceChanged.connect(lambda: self._save_controller(controller))
         controller.modeChanged.connect(lambda: self._save_controller(controller))
@@ -217,18 +283,34 @@ class SettingsManager(QObject):
     @Slot(int, int, int, int)
     def saveWindow(self, x: int, y: int, width: int, height: int) -> None:
         window = WindowSettings(x=x, y=y, width=max(width, 520), height=max(height, 480))
-        self._settings = replace(self._settings, window=window)
-        self._save()
+        self._save_if_changed(replace(self._settings, window=window))
+
+    @Slot(bool)
+    def saveWindowAlwaysOnTop(self, value: bool) -> None:
+        normalized, _ = _parse_bool_setting(
+            value,
+            default=DEFAULT_WINDOW_ALWAYS_ON_TOP,
+        )
+        self._save_if_changed(replace(self._settings, window_always_on_top=normalized))
+
+    @Slot(float)
+    def saveMarqueePixelsPerSecond(self, value: float) -> None:
+        normalized, _ = _normalize_marquee_speed(value)
+        self._save_if_changed(replace(self._settings, marquee_pixels_per_second=normalized))
 
     def _save_controller(self, controller: VisualizerController) -> None:
-        self._settings = replace(
-            self._settings,
-            source_id=controller.sourceId,
-            mode=controller.mode,
-            sensitivity=controller.sensitivity,
+        self._save_if_changed(
+            replace(
+                self._settings,
+                source_id=controller.sourceId,
+                mode=controller.mode,
+                sensitivity=controller.sensitivity,
+            )
         )
-        self._save()
 
-    def _save(self) -> None:
+    def _save_if_changed(self, settings: ApplicationSettings) -> None:
+        if settings == self._settings:
+            return
+        self._settings = settings
         if self._store is not None:
             self._store.save(self._settings)

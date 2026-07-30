@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import os
+from pathlib import Path
 
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
@@ -18,6 +19,8 @@ QGuiApplication = qt_gui.QGuiApplication
 QTest = qt_test.QTest
 create_controller = application_module.create_controller
 create_engine = application_module.create_engine
+JsonSettingsStore = application_module.JsonSettingsStore
+SettingsManager = application_module.SettingsManager
 
 
 @pytest.fixture(scope="module")
@@ -28,10 +31,13 @@ def application() -> QGuiApplication:
 
 def test_settings_window_is_single_instance_and_tracks_always_on_top(
     application: QGuiApplication,
+    tmp_path: Path,
 ) -> None:
     controller = create_controller()
+    store = JsonSettingsStore(tmp_path / "settings.json")
+    settings_manager = SettingsManager(store)
     qml_warnings: list[object] = []
-    engine = create_engine(controller, qml_warnings)
+    engine = create_engine(controller, qml_warnings, settings_manager)
     assert qml_warnings == []
 
     root = engine.rootObjects()[0]
@@ -68,6 +74,7 @@ def test_settings_window_is_single_instance_and_tracks_always_on_top(
     assert root.property("visible") is True
     assert int(root.property("flags")) & always_on_top_flag == 0
     assert always_on_top_switch.property("checked") is False
+    assert store.load().window_always_on_top is False
     assert (
         root.property("x"),
         root.property("y"),
@@ -80,6 +87,7 @@ def test_settings_window_is_single_instance_and_tracks_always_on_top(
 
     assert root.property("windowAlwaysOnTop") is True
     assert int(root.property("flags")) & always_on_top_flag
+    assert store.load().window_always_on_top is True
 
     assert QMetaObject.invokeMethod(root, "openSettingsWindow")
     application.processEvents()
@@ -101,10 +109,13 @@ def test_settings_window_is_single_instance_and_tracks_always_on_top(
 
 def test_animation_speed_slider_uses_main_window_as_single_source(
     application: QGuiApplication,
+    tmp_path: Path,
 ) -> None:
     controller = create_controller()
+    store = JsonSettingsStore(tmp_path / "settings.json")
+    settings_manager = SettingsManager(store)
     qml_warnings: list[object] = []
-    engine = create_engine(controller, qml_warnings)
+    engine = create_engine(controller, qml_warnings, settings_manager)
 
     assert qml_warnings == []
     root = engine.rootObjects()[0]
@@ -117,23 +128,24 @@ def test_animation_speed_slider_uses_main_window_as_single_source(
     assert slider is not None
     assert speed_value is not None
     assert marquee is not None
-    assert root.property("marqueePixelsPerSecond") == pytest.approx(200)
-    assert slider.property("from") == pytest.approx(200)
+    assert root.property("marqueePixelsPerSecond") == pytest.approx(150)
+    assert slider.property("from") == pytest.approx(50)
     assert slider.property("to") == pytest.approx(1000)
     assert slider.property("stepSize") == pytest.approx(50)
     assert slider.property("snapsAlways") is True
     assert slider.property("live") is True
-    assert slider.property("value") == pytest.approx(200)
-    assert marquee.property("pixelsPerSecond") == pytest.approx(200)
-    assert speed_value.property("text") == "200 px/s"
+    assert slider.property("value") == pytest.approx(150)
+    assert marquee.property("pixelsPerSecond") == pytest.approx(150)
+    assert speed_value.property("text") == "150 px/s"
 
     assert QMetaObject.invokeMethod(root, "openSettingsWindow")
     slider.forceActiveFocus()
     QTest.keyClick(settings_window, Qt.Key.Key_Right)
     application.processEvents()
 
-    assert root.property("marqueePixelsPerSecond") == pytest.approx(250)
-    assert slider.property("value") == pytest.approx(250)
+    assert root.property("marqueePixelsPerSecond") == pytest.approx(200)
+    assert slider.property("value") == pytest.approx(200)
+    assert store.load().marquee_pixels_per_second == 200
 
     slider.setProperty("value", 450)
     assert QMetaObject.invokeMethod(slider, "moved")
@@ -142,6 +154,7 @@ def test_animation_speed_slider_uses_main_window_as_single_source(
     assert root.property("marqueePixelsPerSecond") == pytest.approx(450)
     assert marquee.property("pixelsPerSecond") == pytest.approx(450)
     assert speed_value.property("text") == "450 px/s"
+    assert store.load().marquee_pixels_per_second == 450
 
     root.setProperty("marqueePixelsPerSecond", 1000)
     application.processEvents()

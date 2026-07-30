@@ -307,8 +307,8 @@ def test_marquee_speed_is_distance_based_and_changes_without_restart(
     assert toggle is not None
     assert marquee is not None
     assert travel_animation is not None
-    assert root.property("marqueePixelsPerSecond") == pytest.approx(200)
-    assert marquee.property("pixelsPerSecond") == pytest.approx(200)
+    assert root.property("marqueePixelsPerSecond") == pytest.approx(150)
+    assert marquee.property("pixelsPerSecond") == pytest.approx(150)
     assert marquee.property("active") is False
     assert travel_animation.property("running") is False
 
@@ -326,7 +326,7 @@ def test_marquee_speed_is_distance_based_and_changes_without_restart(
         actual_speed = travel_distance / travel_duration * 1000
 
         assert travel_duration == expected_duration
-        assert actual_speed == pytest.approx(200, abs=0.1)
+        assert actual_speed == pytest.approx(150, abs=0.1)
         measurements.append((travel_distance, travel_duration))
 
     assert measurements[1][0] > measurements[0][0]
