@@ -28,7 +28,7 @@ from white_cat_visualizer.settings import (
 QML_PATH = Path(__file__).parent / "ui" / "qml" / "Main.qml"
 ICON_PATH = Path(__file__).parent / "ui" / "qml" / "long_bar_cat" / "long_bar_cat_icon.png"
 APPLICATION_NAME = "Meovvisualizer"
-APPLICATION_VERSION = "0.1.0"
+APPLICATION_VERSION = "0.2.0"
 ORGANIZATION_NAME = "Meovvisualizer"
 
 
