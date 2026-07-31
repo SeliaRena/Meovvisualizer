@@ -37,6 +37,7 @@ def main() -> int:
         "settingsWindow",
         "settingsCloseButton",
         "alwaysOnTopSwitch",
+        "rescanAudioDevicesButton",
     )
     for object_name in settings_objects:
         if root.findChild(QObject, object_name) is None:

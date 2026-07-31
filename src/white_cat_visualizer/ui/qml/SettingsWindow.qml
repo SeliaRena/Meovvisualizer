@@ -13,11 +13,11 @@ ApplicationWindow {
     objectName: "settingsWindow"
     visible: false
     width: 460
-    height: 382
+    height: 548
     minimumWidth: 460
     maximumWidth: 460
-    minimumHeight: 382
-    maximumHeight: 382
+    minimumHeight: 548
+    maximumHeight: 548
     title: qsTr("Settings")
     flags: Qt.Dialog 
          | Qt.FramelessWindowHint
@@ -159,6 +159,149 @@ ApplicationWindow {
                 Layout.fillWidth: true
                 Layout.fillHeight: true
                 spacing: 8
+
+                Label {
+                    objectName: "audioSettingsCategory"
+                    text: qsTr("AUDIO")
+                    color: theme.mutedText
+                    font.pixelSize: 10
+                    font.weight: Font.DemiBold
+                    font.letterSpacing: 1.2
+                }
+
+                Rectangle {
+                    objectName: "audioDeviceSetting"
+                    Layout.fillWidth: true
+                    Layout.minimumHeight: 126
+                    Layout.preferredHeight: 126
+                    color: theme.elevatedOverlay
+                    border.color: theme.subtleBorder
+                    border.width: 1
+                    radius: theme.controlRadius
+
+                    ColumnLayout {
+                        anchors.fill: parent
+                        anchors.leftMargin: 14
+                        anchors.rightMargin: 14
+                        anchors.topMargin: 12
+                        anchors.bottomMargin: 12
+                        spacing: 8
+
+                        RowLayout {
+                            Layout.fillWidth: true
+                            spacing: 12
+
+                            ColumnLayout {
+                                Layout.fillWidth: true
+                                spacing: 4
+
+                                Label {
+                                    Layout.fillWidth: true
+                                    text: qsTr("Audio output devices")
+                                    color: theme.primaryText
+                                    font.pixelSize: 13
+                                    font.weight: Font.DemiBold
+                                }
+
+                                Label {
+                                    Layout.fillWidth: true
+                                    text: qsTr(
+                                        "Rescan Windows audio output devices "
+                                        + "without interrupting the current visualizer."
+                                    )
+                                    color: theme.secondaryText
+                                    font.pixelSize: 11
+                                    wrapMode: Text.WordWrap
+                                }
+                            }
+
+                            Button {
+                                id: rescanAudioDevicesButton
+
+                                objectName: "rescanAudioDevicesButton"
+                                Layout.preferredWidth: 132
+                                Layout.minimumHeight: 40
+                                Layout.preferredHeight: 40
+                                enabled:
+                                    !root.mainWindow.controller.refreshingAudioSources
+                                text:
+                                    root.mainWindow.controller.refreshingAudioSources
+                                    ? qsTr("Scanning…")
+                                    : qsTr("Rescan devices")
+                                activeFocusOnTab: true
+                                Accessible.name: qsTr(
+                                    "Rescan Windows audio output devices"
+                                )
+                                Accessible.description: qsTr(
+                                    "Refresh the available audio output device list "
+                                    + "without changing the current source."
+                                )
+                                onClicked:
+                                    root.mainWindow.controller.refreshAudioSources()
+
+                                contentItem: Text {
+                                    text: rescanAudioDevicesButton.text
+                                    color: rescanAudioDevicesButton.enabled
+                                           ? theme.inverseText
+                                           : theme.disabledText
+                                    font.pixelSize: 12
+                                    font.weight: Font.DemiBold
+                                    horizontalAlignment: Text.AlignHCenter
+                                    verticalAlignment: Text.AlignVCenter
+                                    elide: Text.ElideRight
+                                }
+
+                                background: Rectangle {
+                                    color: !rescanAudioDevicesButton.enabled
+                                           ? theme.elevatedOverlay
+                                           : rescanAudioDevicesButton.down
+                                             ? theme.secondaryText
+                                             : rescanAudioDevicesButton.hovered
+                                               ? theme.primaryText
+                                               : theme.primaryControl
+                                    border.color:
+                                        rescanAudioDevicesButton.visualFocus
+                                        ? theme.accent
+                                        : theme.standardBorder
+                                    border.width:
+                                        rescanAudioDevicesButton.visualFocus ? 2 : 1
+                                    radius: theme.controlRadius
+                                    scale:
+                                        rescanAudioDevicesButton.down ? 0.98 : 1.0
+
+                                    Behavior on color {
+                                        ColorAnimation {
+                                            duration: theme.transitionDuration
+                                        }
+                                    }
+                                    Behavior on scale {
+                                        NumberAnimation {
+                                            duration: theme.transitionDuration
+                                        }
+                                    }
+                                }
+                            }
+                        }
+
+                        Label {
+                            objectName: "audioSourceRefreshStatus"
+                            Layout.fillWidth: true
+                            visible: text.length > 0
+                            text: {
+                                if (root.mainWindow.controller.audioSourceRefreshError.length > 0)
+                                    return root.mainWindow.controller.audioSourceRefreshError
+                                return root.mainWindow.controller.audioSourceRefreshMessage
+                            }
+                            color:
+                                root.mainWindow.controller.audioSourceRefreshError.length > 0
+                                ? theme.secondaryText
+                                : theme.mutedText
+                            font.pixelSize: 11
+                            elide: Text.ElideRight
+                            Accessible.name: qsTr("Audio device rescan status")
+                        }
+                    }
+                }
 
                 Label {
                     text: qsTr("WINDOW")
