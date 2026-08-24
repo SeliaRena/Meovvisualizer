@@ -13,11 +13,11 @@ ApplicationWindow {
     objectName: "settingsWindow"
     visible: false
     width: 460
-    height: 246
+    height: 548
     minimumWidth: 460
     maximumWidth: 460
-    minimumHeight: 246
-    maximumHeight: 246
+    minimumHeight: 548
+    maximumHeight: 548
     title: qsTr("Settings")
     flags: Qt.Dialog 
          | Qt.FramelessWindowHint
@@ -161,6 +161,149 @@ ApplicationWindow {
                 spacing: 8
 
                 Label {
+                    objectName: "audioSettingsCategory"
+                    text: qsTr("AUDIO")
+                    color: theme.mutedText
+                    font.pixelSize: 10
+                    font.weight: Font.DemiBold
+                    font.letterSpacing: 1.2
+                }
+
+                Rectangle {
+                    objectName: "audioDeviceSetting"
+                    Layout.fillWidth: true
+                    Layout.minimumHeight: 126
+                    Layout.preferredHeight: 126
+                    color: theme.elevatedOverlay
+                    border.color: theme.subtleBorder
+                    border.width: 1
+                    radius: theme.controlRadius
+
+                    ColumnLayout {
+                        anchors.fill: parent
+                        anchors.leftMargin: 14
+                        anchors.rightMargin: 14
+                        anchors.topMargin: 12
+                        anchors.bottomMargin: 12
+                        spacing: 8
+
+                        RowLayout {
+                            Layout.fillWidth: true
+                            spacing: 12
+
+                            ColumnLayout {
+                                Layout.fillWidth: true
+                                spacing: 4
+
+                                Label {
+                                    Layout.fillWidth: true
+                                    text: qsTr("Audio output devices")
+                                    color: theme.primaryText
+                                    font.pixelSize: 13
+                                    font.weight: Font.DemiBold
+                                }
+
+                                Label {
+                                    Layout.fillWidth: true
+                                    text: qsTr(
+                                        "Rescan Windows audio output devices "
+                                        + "without interrupting the current visualizer."
+                                    )
+                                    color: theme.secondaryText
+                                    font.pixelSize: 11
+                                    wrapMode: Text.WordWrap
+                                }
+                            }
+
+                            Button {
+                                id: rescanAudioDevicesButton
+
+                                objectName: "rescanAudioDevicesButton"
+                                Layout.preferredWidth: 132
+                                Layout.minimumHeight: 40
+                                Layout.preferredHeight: 40
+                                enabled:
+                                    !root.mainWindow.controller.refreshingAudioSources
+                                text:
+                                    root.mainWindow.controller.refreshingAudioSources
+                                    ? qsTr("Scanning…")
+                                    : qsTr("Rescan devices")
+                                activeFocusOnTab: true
+                                Accessible.name: qsTr(
+                                    "Rescan Windows audio output devices"
+                                )
+                                Accessible.description: qsTr(
+                                    "Refresh the available audio output device list "
+                                    + "without changing the current source."
+                                )
+                                onClicked:
+                                    root.mainWindow.controller.refreshAudioSources()
+
+                                contentItem: Text {
+                                    text: rescanAudioDevicesButton.text
+                                    color: rescanAudioDevicesButton.enabled
+                                           ? theme.inverseText
+                                           : theme.disabledText
+                                    font.pixelSize: 12
+                                    font.weight: Font.DemiBold
+                                    horizontalAlignment: Text.AlignHCenter
+                                    verticalAlignment: Text.AlignVCenter
+                                    elide: Text.ElideRight
+                                }
+
+                                background: Rectangle {
+                                    color: !rescanAudioDevicesButton.enabled
+                                           ? theme.elevatedOverlay
+                                           : rescanAudioDevicesButton.down
+                                             ? theme.secondaryText
+                                             : rescanAudioDevicesButton.hovered
+                                               ? theme.primaryText
+                                               : theme.primaryControl
+                                    border.color:
+                                        rescanAudioDevicesButton.visualFocus
+                                        ? theme.accent
+                                        : theme.standardBorder
+                                    border.width:
+                                        rescanAudioDevicesButton.visualFocus ? 2 : 1
+                                    radius: theme.controlRadius
+                                    scale:
+                                        rescanAudioDevicesButton.down ? 0.98 : 1.0
+
+                                    Behavior on color {
+                                        ColorAnimation {
+                                            duration: theme.transitionDuration
+                                        }
+                                    }
+                                    Behavior on scale {
+                                        NumberAnimation {
+                                            duration: theme.transitionDuration
+                                        }
+                                    }
+                                }
+                            }
+                        }
+
+                        Label {
+                            objectName: "audioSourceRefreshStatus"
+                            Layout.fillWidth: true
+                            visible: text.length > 0
+                            text: {
+                                if (root.mainWindow.controller.audioSourceRefreshError.length > 0)
+                                    return root.mainWindow.controller.audioSourceRefreshError
+                                return root.mainWindow.controller.audioSourceRefreshMessage
+                            }
+                            color:
+                                root.mainWindow.controller.audioSourceRefreshError.length > 0
+                                ? theme.secondaryText
+                                : theme.mutedText
+                            font.pixelSize: 11
+                            elide: Text.ElideRight
+                            Accessible.name: qsTr("Audio device rescan status")
+                        }
+                    }
+                }
+
+                Label {
                     text: qsTr("WINDOW")
                     color: theme.mutedText
                     font.pixelSize: 10
@@ -289,6 +432,201 @@ ApplicationWindow {
                             }
 
                             background: Item {}
+                        }
+                    }
+                }
+
+                Label {
+                    text: qsTr("ANIMATION")
+                    color: theme.mutedText
+                    font.pixelSize: 10
+                    font.weight: Font.DemiBold
+                    font.letterSpacing: 1.2
+                }
+
+                Rectangle {
+                    objectName: "animationSpeedSetting"
+                    Layout.fillWidth: true
+                    Layout.minimumHeight: 112
+                    Layout.preferredHeight: 112
+                    color: theme.elevatedOverlay
+                    border.color: theme.subtleBorder
+                    border.width: 1
+                    radius: theme.controlRadius
+
+                    ColumnLayout {
+                        anchors.fill: parent
+                        anchors.leftMargin: 14
+                        anchors.rightMargin: 14
+                        anchors.topMargin: 12
+                        anchors.bottomMargin: 12
+                        spacing: 8
+
+                        RowLayout {
+                            Layout.fillWidth: true
+                            spacing: 12
+
+                            ColumnLayout {
+                                Layout.fillWidth: true
+                                spacing: 4
+
+                                Label {
+                                    Layout.fillWidth: true
+                                    text: qsTr("Cat travel speed")
+                                    color: theme.primaryText
+                                    font.pixelSize: 13
+                                    font.weight: Font.DemiBold
+                                }
+
+                                Label {
+                                    Layout.fillWidth: true
+                                    text: qsTr(
+                                        "Control how fast the cat crosses the marquee."
+                                    )
+                                    color: theme.secondaryText
+                                    font.pixelSize: 11
+                                    wrapMode: Text.WordWrap
+                                }
+                            }
+
+                            Label {
+                                objectName: "marqueeSpeedValue"
+                                Layout.alignment: Qt.AlignTop
+                                text: qsTr("%1 px/s").arg(
+                                    Math.round(
+                                        root.mainWindow.marqueePixelsPerSecond
+                                    )
+                                )
+                                color: theme.primaryText
+                                font.pixelSize: 12
+                                font.weight: Font.DemiBold
+                            }
+                        }
+
+                        Slider {
+                            id: marqueeSpeedSlider
+
+                            objectName: "marqueeSpeedSlider"
+                            Layout.fillWidth: true
+                            Layout.minimumHeight: 32
+                            Layout.preferredHeight: 32
+                            from: 50
+                            to: 1000
+                            stepSize: 50
+                            snapMode: Slider.SnapAlways
+                            live: true
+                            value: root.mainWindow.marqueePixelsPerSecond
+                            activeFocusOnTab: true
+                            hoverEnabled: true
+                            readonly property bool snapsAlways:
+                                snapMode === Slider.SnapAlways
+                            Accessible.name: qsTr("Cat travel speed")
+                            Accessible.description: qsTr(
+                                "Controls how fast the cat crosses the marquee "
+                                + "in pixels per second."
+                            )
+
+                            onMoved: {
+                                root.mainWindow.marqueePixelsPerSecond = value
+                            }
+
+                            background: Rectangle {
+                                x: marqueeSpeedSlider.leftPadding
+                                y: marqueeSpeedSlider.topPadding
+                                   + marqueeSpeedSlider.availableHeight / 2
+                                   - height / 2
+                                width: marqueeSpeedSlider.availableWidth
+                                height: 3
+                                color: {
+                                    if (!marqueeSpeedSlider.enabled)
+                                        return theme.elevatedOverlay
+                                    if (marqueeSpeedSlider.pressed)
+                                        return theme.pressedOverlay
+                                    if (marqueeSpeedSlider.hovered)
+                                        return theme.hoverOverlay
+                                    return theme.subtleBorder
+                                }
+                                border.color: marqueeSpeedSlider.visualFocus
+                                              ? theme.accent
+                                              : theme.subtleBorder
+                                border.width:
+                                    marqueeSpeedSlider.visualFocus ? 1 : 0
+                                radius: height / 2
+
+                                Behavior on color {
+                                    ColorAnimation {
+                                        duration: theme.transitionDuration
+                                    }
+                                }
+
+                                Rectangle {
+                                    width:
+                                        marqueeSpeedSlider.visualPosition
+                                        * parent.width
+                                    height: parent.height
+                                    color: {
+                                        if (!marqueeSpeedSlider.enabled)
+                                            return theme.disabledText
+                                        if (marqueeSpeedSlider.pressed)
+                                            return theme.accent
+                                        return theme.softAccent
+                                    }
+                                    radius: parent.radius
+
+                                    Behavior on color {
+                                        ColorAnimation {
+                                            duration: theme.transitionDuration
+                                        }
+                                    }
+                                }
+                            }
+
+                            handle: Rectangle {
+                                x: marqueeSpeedSlider.leftPadding
+                                   + marqueeSpeedSlider.visualPosition
+                                   * (marqueeSpeedSlider.availableWidth - width)
+                                y: marqueeSpeedSlider.topPadding
+                                   + marqueeSpeedSlider.availableHeight / 2
+                                   - height / 2
+                                implicitWidth: {
+                                    if (!marqueeSpeedSlider.enabled)
+                                        return 14
+                                    if (marqueeSpeedSlider.pressed)
+                                        return 13
+                                    if (marqueeSpeedSlider.hovered)
+                                        return 16
+                                    return 14
+                                }
+                                implicitHeight: implicitWidth
+                                color: {
+                                    if (!marqueeSpeedSlider.enabled)
+                                        return theme.disabledText
+                                    if (marqueeSpeedSlider.pressed)
+                                        return theme.secondaryText
+                                    return theme.primaryText
+                                }
+                                border.color: {
+                                    if (marqueeSpeedSlider.visualFocus)
+                                        return theme.accent
+                                    if (marqueeSpeedSlider.hovered)
+                                        return theme.strongBorder
+                                    return theme.standardBorder
+                                }
+                                border.width:
+                                    marqueeSpeedSlider.visualFocus ? 2 : 1
+                                radius: width / 2
+
+                                Behavior on implicitWidth {
+                                    NumberAnimation {
+                                        duration: theme.transitionDuration
+                                    }
+                                }
+                                Behavior on color {
+                                    ColorAnimation {
+                                        duration: theme.transitionDuration
+                                    }
+                                }
+                            }
                         }
                     }
                 }

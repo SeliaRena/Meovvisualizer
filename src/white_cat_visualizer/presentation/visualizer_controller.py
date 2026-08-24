@@ -3,13 +3,15 @@ from __future__ import annotations
 from collections.abc import Sequence
 from dataclasses import dataclass
 from enum import StrEnum
+from threading import Thread
 from time import perf_counter
+from typing import cast
 
 from PySide6.QtCore import Property, QObject, Qt, Signal, Slot
 
 from white_cat_visualizer.analysis.frame import VisualizerFrame
 from white_cat_visualizer.analysis.spectrum import SpectrumAnalyzer
-from white_cat_visualizer.audio.source import AudioSource
+from white_cat_visualizer.audio.source import AudioSource, AudioSourceProvider
 from white_cat_visualizer.runtime.analysis_worker import (
     AnalysisWorker,
     WorkerFailure,
@@ -28,6 +30,38 @@ class ControllerErrorState:
     message: str
 
 
+@dataclass(frozen=True, slots=True)
+class _AudioSourceRefreshResult:
+    sources: tuple[AudioSource, ...] = ()
+    error_message: str = ""
+
+
+SourceSnapshot = tuple[tuple[str, str], ...]
+
+
+def _validate_source_catalog(
+    sources: Sequence[AudioSource],
+    *,
+    allow_empty: bool,
+) -> tuple[AudioSource, ...]:
+    catalog = tuple(sources)
+    if not catalog and not allow_empty:
+        raise ValueError("at least one audio source is required")
+
+    source_ids = [source.source_id for source in catalog]
+    if len(set(source_ids)) != len(source_ids):
+        raise ValueError("audio source IDs must be unique")
+
+    display_names = [source.display_name for source in catalog]
+    if len(set(display_names)) != len(display_names):
+        raise ValueError("audio source display names must be unique")
+    return catalog
+
+
+def _source_snapshot(sources: Sequence[AudioSource]) -> SourceSnapshot:
+    return tuple(sorted((source.source_id, source.display_name) for source in sources))
+
+
 class VisualizerController(QObject):
     """Own runtime lifecycle and expose render-ready state on the UI thread."""
 
@@ -41,7 +75,12 @@ class VisualizerController(QObject):
     peakChanged = Signal()
     diagnosticsChanged = Signal()
     debugOverlayEnabledChanged = Signal()
+    sourceNamesChanged = Signal()
+    refreshingAudioSourcesChanged = Signal()
+    audioSourceRefreshMessageChanged = Signal()
+    audioSourceRefreshErrorChanged = Signal()
     _runtimeUpdateAvailable = Signal()
+    _audioSourcesRefreshCompleted = Signal(object)
 
     _MODE_NAMES = ("Reference bars", "Long cats")
     _BAND_COUNT = 24
@@ -54,32 +93,37 @@ class VisualizerController(QObject):
         initial_source_id: str | None = None,
         initial_mode: str | None = None,
         initial_sensitivity: float = 1.0,
+        audio_source_provider: AudioSourceProvider | None = None,
         parent: QObject | None = None,
     ) -> None:
         super().__init__(parent)
-        if not sources:
-            raise ValueError("at least one audio source is required")
         if analyzer.band_count != self._BAND_COUNT:
             raise ValueError(f"analyzer must provide {self._BAND_COUNT} bands")
 
-        source_by_name = {source.display_name: source for source in sources}
-        if len(source_by_name) != len(sources):
-            raise ValueError("audio source display names must be unique")
-        source_by_id = {source.source_id: source for source in sources}
-        if len(source_by_id) != len(sources):
-            raise ValueError("audio source IDs must be unique")
+        catalog_sources = _validate_source_catalog(sources, allow_empty=False)
+        source_by_id = {source.source_id: source for source in catalog_sources}
 
         if initial_source_id is None:
-            selected_source = sources[0]
+            selected_source = catalog_sources[0]
         else:
             try:
                 selected_source = source_by_id[initial_source_id]
             except KeyError as error:
                 raise ValueError(f"unknown initial source ID: {initial_source_id}") from error
 
-        self._sources = tuple(sources)
-        self._source_by_name = source_by_name
+        self._catalog_sources = catalog_sources
+        self._catalog_snapshot = _source_snapshot(catalog_sources)
         self._selected_source = selected_source
+        self._source_names: tuple[str, ...] = ()
+        self._source_by_name: dict[str, AudioSource] = {}
+        self._source_name_by_id: dict[str, str] = {}
+        self._rebuild_source_options()
+        self._audio_source_provider = audio_source_provider
+        self._audio_source_refresh_thread: Thread | None = None
+        self._refreshing_audio_sources = False
+        self._audio_source_refresh_message = ""
+        self._audio_source_refresh_error = ""
+        self._shutting_down = False
         self._analyzer = analyzer
         self._mode = initial_mode if initial_mode in self._MODE_NAMES else self._MODE_NAMES[0]
         self._sensitivity = min(max(initial_sensitivity, 0.5), 2.0)
@@ -100,6 +144,10 @@ class VisualizerController(QObject):
             self.processNextFrame,
             Qt.ConnectionType.QueuedConnection,
         )
+        self._audioSourcesRefreshCompleted.connect(
+            self._complete_audio_source_refresh,
+            Qt.ConnectionType.QueuedConnection,
+        )
 
     def _create_worker(self) -> AnalysisWorker:
         return AnalysisWorker(
@@ -113,25 +161,29 @@ class VisualizerController(QObject):
         return cls._MODE_NAMES
 
     def _get_source_names(self) -> list[str]:
-        return [source.display_name for source in self._sources]
+        return list(self._source_names)
 
-    sourceNames = Property(list, _get_source_names, constant=True)
+    sourceNames = Property(list, _get_source_names, notify=sourceNamesChanged)
 
     def _get_source(self) -> str:
-        return self._selected_source.display_name
+        return self._source_name_by_id[self._selected_source.source_id]
 
     def _set_source(self, value: str) -> None:
         selected_source = self._source_by_name.get(value)
-        if selected_source is None or selected_source is self._selected_source:
+        if selected_source is None or selected_source.source_id == self._selected_source.source_id:
             return
 
         was_running = self._running
         self._running = False
         self._worker.shutdown()
         self._selected_source = selected_source
+        previous_source_names = self._source_names
+        self._rebuild_source_options()
         self._worker = self._create_worker()
         self._reset_output()
         self._set_error_state(None)
+        if self._source_names != previous_source_names:
+            self.sourceNamesChanged.emit()
         self.sourceChanged.emit()
 
         if was_running:
@@ -230,6 +282,107 @@ class VisualizerController(QObject):
     def error_state(self) -> ControllerErrorState | None:
         return self._error_state
 
+    @Property(bool, notify=refreshingAudioSourcesChanged)
+    def refreshingAudioSources(self) -> bool:
+        return self._refreshing_audio_sources
+
+    @Property(str, notify=audioSourceRefreshMessageChanged)
+    def audioSourceRefreshMessage(self) -> str:
+        return self._audio_source_refresh_message
+
+    @Property(str, notify=audioSourceRefreshErrorChanged)
+    def audioSourceRefreshError(self) -> str:
+        return self._audio_source_refresh_error
+
+    @Slot()
+    def refreshAudioSources(self) -> None:
+        if self._refreshing_audio_sources or self._shutting_down:
+            return
+        if self._audio_source_provider is None:
+            self._set_audio_source_refresh_message("")
+            self._set_audio_source_refresh_error("Audio output device rescanning is unavailable.")
+            return
+
+        self._set_audio_source_refresh_error("")
+        self._set_audio_source_refresh_message("Scanning audio output devices…")
+        self._set_refreshing_audio_sources(True)
+        thread = Thread(
+            target=self._run_audio_source_refresh,
+            name="white-cat-audio-source-refresh",
+            daemon=True,
+        )
+        self._audio_source_refresh_thread = thread
+        thread.start()
+
+    def _run_audio_source_refresh(self) -> None:
+        provider = self._audio_source_provider
+        if provider is None:
+            return
+        try:
+            result = _AudioSourceRefreshResult(sources=tuple(provider()))
+        except Exception as error:
+            # Enumeration is an external backend boundary. Preserve the active
+            # catalog and carry the exact failure back to the UI thread.
+            detail = str(error).strip() or type(error).__name__
+            result = _AudioSourceRefreshResult(error_message=detail)
+        try:
+            self._audioSourcesRefreshCompleted.emit(result)
+        except RuntimeError:
+            # The application may finish while an OS enumeration is in flight.
+            return
+
+    @Slot(object)
+    def _complete_audio_source_refresh(self, raw_result: object) -> None:
+        if self._shutting_down:
+            return
+        result = cast(_AudioSourceRefreshResult, raw_result)
+        self._audio_source_refresh_thread = None
+        self._set_refreshing_audio_sources(False)
+
+        if result.error_message:
+            self._set_audio_source_refresh_message("")
+            self._set_audio_source_refresh_error(
+                f"Could not rescan audio output devices: {result.error_message}"
+            )
+            return
+
+        try:
+            catalog_sources = _validate_source_catalog(
+                result.sources,
+                allow_empty=True,
+            )
+        except ValueError as error:
+            self._set_audio_source_refresh_message("")
+            self._set_audio_source_refresh_error(f"Could not rescan audio output devices: {error}")
+            return
+
+        if not catalog_sources:
+            self._set_audio_source_refresh_message(
+                "No audio output devices were found; existing devices were kept."
+            )
+            self._set_audio_source_refresh_error("")
+            return
+
+        snapshot = _source_snapshot(catalog_sources)
+        if snapshot == self._catalog_snapshot:
+            self._set_audio_source_refresh_message("No changes detected")
+            self._set_audio_source_refresh_error("")
+            return
+
+        selected_source_is_listed = any(
+            source.source_id == self._selected_source.source_id for source in catalog_sources
+        )
+        self._catalog_sources = catalog_sources
+        self._catalog_snapshot = snapshot
+        self._rebuild_source_options()
+        self.sourceNamesChanged.emit()
+        if selected_source_is_listed:
+            message = "Audio devices updated"
+        else:
+            message = "Audio devices updated; current source is no longer listed"
+        self._set_audio_source_refresh_message(message)
+        self._set_audio_source_refresh_error("")
+
     @Slot()
     def toggleRunning(self) -> None:
         if self._running:
@@ -253,6 +406,7 @@ class VisualizerController(QObject):
 
     @Slot()
     def shutdown(self) -> None:
+        self._shutting_down = True
         was_running = self._running
         self._running = False
         self._worker.shutdown()
@@ -335,6 +489,49 @@ class VisualizerController(QObject):
             return
         self._error_state = value
         self.errorChanged.emit()
+
+    def _rebuild_source_options(self) -> None:
+        source_names = [source.display_name for source in self._catalog_sources]
+        source_by_name = {source.display_name: source for source in self._catalog_sources}
+        source_name_by_id = {
+            source.source_id: source.display_name for source in self._catalog_sources
+        }
+
+        selected_source_id = self._selected_source.source_id
+        if selected_source_id not in source_name_by_id:
+            current_name = self._selected_source.display_name
+            if current_name in source_by_name:
+                base_name = f"{current_name} (current)"
+                current_name = base_name
+                suffix = 2
+                while current_name in source_by_name:
+                    current_name = f"{base_name} ({suffix})"
+                    suffix += 1
+            source_names.append(current_name)
+            source_by_name[current_name] = self._selected_source
+            source_name_by_id[selected_source_id] = current_name
+
+        self._source_names = tuple(source_names)
+        self._source_by_name = source_by_name
+        self._source_name_by_id = source_name_by_id
+
+    def _set_refreshing_audio_sources(self, value: bool) -> None:
+        if value == self._refreshing_audio_sources:
+            return
+        self._refreshing_audio_sources = value
+        self.refreshingAudioSourcesChanged.emit()
+
+    def _set_audio_source_refresh_message(self, value: str) -> None:
+        if value == self._audio_source_refresh_message:
+            return
+        self._audio_source_refresh_message = value
+        self.audioSourceRefreshMessageChanged.emit()
+
+    def _set_audio_source_refresh_error(self, value: str) -> None:
+        if value == self._audio_source_refresh_error:
+            return
+        self._audio_source_refresh_error = value
+        self.audioSourceRefreshErrorChanged.emit()
 
     def _publish_latest_frame(self) -> None:
         if self._latest_frame is None:

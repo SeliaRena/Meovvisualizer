@@ -5,12 +5,13 @@ import warnings
 from collections.abc import Sequence
 from pathlib import Path
 
+import resource_rc  # pyright: ignore[reportUnusedImport]  # noqa: F401
 from PySide6.QtCore import QTimer, QUrl
 from PySide6.QtGui import QGuiApplication, QIcon
 from PySide6.QtQml import QQmlApplicationEngine, QQmlError
 
 from white_cat_visualizer.analysis.spectrum import SpectrumAnalyzer
-from white_cat_visualizer.audio.source import AudioSource
+from white_cat_visualizer.audio.source import AudioSource, AudioSourceProvider
 from white_cat_visualizer.audio.synthetic import SyntheticAudioSource, SyntheticMode
 from white_cat_visualizer.audio.windows_loopback import (
     WindowsAudioError,
@@ -24,22 +25,31 @@ from white_cat_visualizer.settings import (
     default_settings_path,
 )
 
-import resource_rc # noqa: F401
-
 QML_PATH = Path(__file__).parent / "ui" / "qml" / "Main.qml"
 ICON_PATH = Path(__file__).parent / "ui" / "qml" / "long_bar_cat" / "long_bar_cat_icon.png"
 APPLICATION_NAME = "Meovvisualizer"
-APPLICATION_VERSION = "0.1.0"
+APPLICATION_VERSION = "0.2.0"
 ORGANIZATION_NAME = "Meovvisualizer"
 
 
-def create_controller(settings: ApplicationSettings | None = None) -> VisualizerController:
+def create_audio_source_catalog() -> tuple[AudioSource, ...]:
     sources: list[AudioSource] = [SyntheticAudioSource(mode) for mode in SyntheticMode]
     if sys.platform == "win32":
-        try:
-            sources.extend(create_windows_loopback_sources())
-        except WindowsAudioError as error:
-            warnings.warn(str(error), RuntimeWarning, stacklevel=2)
+        sources.extend(create_windows_loopback_sources())
+    return tuple(sources)
+
+
+def create_controller(
+    settings: ApplicationSettings | None = None,
+    *,
+    audio_source_provider: AudioSourceProvider | None = None,
+) -> VisualizerController:
+    source_provider = audio_source_provider or create_audio_source_catalog
+    try:
+        sources = tuple(source_provider())
+    except WindowsAudioError as error:
+        warnings.warn(str(error), RuntimeWarning, stacklevel=2)
+        sources = tuple(SyntheticAudioSource(mode) for mode in SyntheticMode)
     analyzer = SpectrumAnalyzer()
     default_source_id = f"synthetic:{SyntheticMode.BASS_PULSE.value}"
     initial_source_id = default_source_id
@@ -70,6 +80,7 @@ def create_controller(settings: ApplicationSettings | None = None) -> Visualizer
         initial_source_id=initial_source_id,
         initial_mode=initial_mode,
         initial_sensitivity=initial_sensitivity,
+        audio_source_provider=source_provider,
     )
 
 

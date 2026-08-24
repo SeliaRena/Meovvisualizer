@@ -11,7 +11,9 @@ ApplicationWindow {
 
     required property var controller
     required property var settingsManager
-    property bool windowAlwaysOnTop: true
+    property bool windowAlwaysOnTop: settingsManager.windowAlwaysOnTop
+    property real marqueePixelsPerSecond:
+        settingsManager.marqueePixelsPerSecond
 
     Components.VisualTokens {
         id: theme
@@ -40,6 +42,11 @@ ApplicationWindow {
          | (root.windowAlwaysOnTop ? Qt.WindowStaysOnTopHint : 0)
     color: "transparent"
     opacity: 1.0
+
+    onWindowAlwaysOnTopChanged:
+        settingsManager.saveWindowAlwaysOnTop(windowAlwaysOnTop)
+    onMarqueePixelsPerSecondChanged:
+        settingsManager.saveMarqueePixelsPerSecond(marqueePixelsPerSecond)
 
     readonly property int wideToolbarMinimumWidth: 896
     readonly property bool narrow: width < wideToolbarMinimumWidth
@@ -380,6 +387,7 @@ ApplicationWindow {
                 expanded: true
                 panelTitle: qsTr("CONTROLS")
                 marqueeText: qsTr("Vibing mode")
+                marqueePixelsPerSecond: root.marqueePixelsPerSecond
 
                 ColumnLayout {
                     id: controlSurface

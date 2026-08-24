@@ -26,6 +26,20 @@ Item {
     property real travelProgress: 0.0
     property real trailPhase: 0.0
 
+    readonly property real travelDistance:
+        Math.max(1, root.width + runner.width)
+    readonly property real effectivePixelsPerSecond:
+        Math.max(1, root.pixelsPerSecond)
+    readonly property int travelDuration:
+        Math.max(
+            1,
+            Math.round(
+                root.travelDistance
+                / root.effectivePixelsPerSecond
+                * 1000
+            )
+        )
+
     /*
      * The marquee no longer assumes a fixed compact height. Its natural height
      * is owned by the cat, with only enough padding for the walking bob.
@@ -53,6 +67,18 @@ Item {
         trailAnimation.stop()
         travelProgress = 0.0
         trailPhase = 0.0
+    }
+
+    function advanceTravel(frameTime) {
+        if (!root.active || frameTime <= 0)
+            return
+
+        const distanceAdvanced =
+            root.effectivePixelsPerSecond * frameTime
+        const progressAdvanced =
+            distanceAdvanced / root.travelDistance
+        const nextProgress = root.travelProgress + progressAdvanced
+        root.travelProgress = nextProgress - Math.floor(nextProgress)
     }
 
     onActiveChanged: {
@@ -127,20 +153,11 @@ Item {
         }
     }
 
-    NumberAnimation {
+    FrameAnimation {
         id: travelAnimation
 
-        target: root
-        property: "travelProgress"
-        from: 0.0
-        to: 1.0
-        duration: Math.max(
-                      4200,
-                      Math.round((root.width + runner.width)
-                                 / root.pixelsPerSecond * 1000)
-                  )
-        loops: Animation.Infinite
-        easing.type: Easing.Linear
+        objectName: "marqueeTravelAnimation"
+        onTriggered: root.advanceTravel(frameTime)
     }
 
     NumberAnimation {

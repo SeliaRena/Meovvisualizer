@@ -294,6 +294,62 @@ def test_controls_panel_expands_and_collapses_without_losing_usable_content(
     del engine
 
 
+def test_marquee_speed_is_distance_based_and_changes_without_restart(
+    application: QGuiApplication,
+) -> None:
+    controller = create_controller()
+    engine = create_engine(controller)
+    root = engine.rootObjects()[0]
+    toggle = root.findChild(QQuickItem, "controlsToggleButton")
+    marquee = root.findChild(QQuickItem, "vibingMarquee")
+    travel_animation = root.findChild(QObject, "marqueeTravelAnimation")
+
+    assert toggle is not None
+    assert marquee is not None
+    assert travel_animation is not None
+    assert root.property("marqueePixelsPerSecond") == pytest.approx(150)
+    assert marquee.property("pixelsPerSecond") == pytest.approx(150)
+    assert marquee.property("active") is False
+    assert travel_animation.property("running") is False
+
+    measurements: list[tuple[float, int]] = []
+    for width in (root.property("minimumWidth"), 1200):
+        root.setProperty("width", width)
+        application.processEvents()
+
+        travel_distance = marquee.property("travelDistance")
+        travel_duration = marquee.property("travelDuration")
+        expected_duration = max(
+            1,
+            round(travel_distance / marquee.property("effectivePixelsPerSecond") * 1000),
+        )
+        actual_speed = travel_distance / travel_duration * 1000
+
+        assert travel_duration == expected_duration
+        assert actual_speed == pytest.approx(150, abs=0.1)
+        measurements.append((travel_distance, travel_duration))
+
+    assert measurements[1][0] > measurements[0][0]
+    assert measurements[1][1] > measurements[0][1]
+
+    assert QMetaObject.invokeMethod(toggle, "click")
+    wait_until(lambda: marquee.property("active") is True)
+    assert travel_animation.property("running") is True
+
+    marquee.setProperty("travelProgress", 0.5)
+    root.setProperty("marqueePixelsPerSecond", 1000)
+
+    assert marquee.property("pixelsPerSecond") == pytest.approx(1000)
+    assert marquee.property("travelProgress") == pytest.approx(0.5)
+
+    assert QMetaObject.invokeMethod(toggle, "click")
+    wait_until(lambda: marquee.property("active") is False)
+    assert travel_animation.property("running") is False
+    assert marquee.property("travelProgress") == pytest.approx(0.0)
+
+    del engine
+
+
 def test_running_button_controls_start_and_stop_state(
     application: QGuiApplication,
 ) -> None:
